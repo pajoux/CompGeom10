@@ -1,0 +1,27 @@
+ /--------------------------\
+ | Flip-Graph Visualization |
+ \--------------------------/
+
+-Philippe Ajoux
+-Bobby Prochnow
+
+-[Overview]-
+Our program visualizes flip graphs with respect to a function mapping triangulations to a real value. Our idea is to use a function that measures the "quality" of a triangulation. For example, the Delaunay triangulation should have the highest quality.
+
+-[Deliverable]-
+The final program will be a Java Applet built using Processing. It should be runnable from a webpage.
+
+-[Input]-
+An embedded triangulation of 6 points in 2-D. We think that 6 vertices is the most number of vertices we can have while still having our flip-graph be planar. 
+
+-[Output]-
+After the input, a flip-graph will be constructed from the initial triangulation. Each triangulation will be represented by a node in the flip-graph. We then present the whole flip-graph to the user with the "quality" function applied to each node and displayed as either height or color. Each node can then be explored to view the triangulation it represents.
+
+We can easily attempt to increase the number of vertices later if we find the visualization to still be reasonable.
+
+-[Algorithms]-
+ + Flip-graph exploration - Detect all potential flips in a triangulation and then explore using BFS or DFS or some other variant of a graph search.
+ + Graph Drawing - We could use Tutte's or some other variant to draw the flip-graph.
+
+-[Notes]-
+We realize the algorithms for this are all relatively simple. This is just our initial idea. If you have any other ideas, improvements, or feelings on directions we should take, we are up for it.
