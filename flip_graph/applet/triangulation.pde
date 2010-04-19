@@ -1,124 +1,3 @@
-import processing.core.*; 
-import processing.xml.*; 
-
-import java.applet.*; 
-import java.awt.Dimension; 
-import java.awt.Frame; 
-import java.awt.event.MouseEvent; 
-import java.awt.event.KeyEvent; 
-import java.awt.event.FocusEvent; 
-import java.awt.Image; 
-import java.io.*; 
-import java.net.*; 
-import java.text.*; 
-import java.util.*; 
-import java.util.zip.*; 
-import java.util.regex.*; 
-
-public class flip_graph extends PApplet {
-
-
-// Aesthetics - Color properties, etc.
-int colorBackground = color(61, 61, 61);
-int colorNode = color(219, 171, 206);
-int colorLine = color(171, 206, 219);
-
-// Input Graph
-Triangulation graph = new Triangulation(11);
-
-// Interactivity
-int nodeSelected = -1;
-int edge = 3;
-
-public void mousePressed()
-{
-  // Only do stuff on LEFT mouse click.
-  if (mouseButton != LEFT) return;
-  
-  // Check to see if we aren't on top of another node.
-  nodeSelected = graph.closestNode(mouseX, mouseY, 6);
-  if (nodeSelected == -1)
-  {
-    graph.addVertex(mouseX, mouseY);
-    graph.triangulate();
-  }
-}
-
-public void mouseDragged()
-{
-  // Only drag a node if we selected one.
-  if (nodeSelected == -1) return;
-  graph.vx[nodeSelected] = mouseX;
-  graph.vy[nodeSelected] = mouseY;
-  graph.triangulate();
-}
-
-public void setup()
-{
-  // Set the font for drawing text with.
-  PFont font = createFont("Verdana", 12);
-  textFont(font);
-  
-  // Set window/drawing properties.
-  size(800, 600);
-  frameRate(25);
-  smooth();
-  stroke(255);
-  background(0, 0, 0);
-}
-
-public void draw() 
-{
-  // Draw the background.
-  background(colorBackground);
-  
-  // Draw the graph.
-  graph.drawGraph();
-  
-  // Add an FPS counter.
-  fill(255);
-  text("FPS: " + round(frameRate), 0, 12);
-  
-  if (graph.vertexCount >= graph.vertexMax)
-  {
-    graph.flip(edge);
-    edge += 1;
-    if (edge >= graph.edgeCount) edge = 3;
-  }
-}
-
-
-// Namespace containing some standard geometric functions.
-static class Geom
-{
-  // Counter-Clockwise Predicate.
-  //   + Return 1  if (a,b,c) are CCW-oriented
-  //   + Return 0  if (a,b,c) are colinear
-  //   + Return -1 if (a,b,c) are CW-oriented 
-  public static int CCW(float a_x, float a_y, float b_x, float b_y, float c_x, float c_y)
-  {
-    float r1_x = a_x - c_x;
-    float r1_y = a_y - c_y;
-    float r2_x = b_x - c_x;
-    float r2_y = b_y - c_y;
-    float det  = r1_x * r2_y - r2_x * r1_y;
-    if (det > 0)
-      return 1;
-    else if (det == 0)
-      return 0;
-    else
-      return -1;
-  }
-
-  // Line-segment Intersection.
-  //   + Return true if line-segment [a1,a2] intersects [b1,b2]
-  //   + Assumes general-position.
-  public static boolean lineIntersection(float a1_x, float a1_y, float a2_x, float a2_y, float b1_x, float b1_y, float b2_x, float b2_y)
-  {
-    return (CCW(a1_x, a1_y, a2_x, a2_y, b1_x, b1_y) != CCW(a1_x, a1_y, a2_x, a2_y, b2_x, b2_y)) &&
-           (CCW(b1_x, b1_y, b2_x, b2_y, a1_x, a1_y) != CCW(b1_x, b1_y, b2_x, b2_y, a2_x, a2_y));
-  }
-}
 
 // Holds a planar embedding and triangulation of a set of 2D vertices.
 class Triangulation
@@ -160,7 +39,7 @@ class Triangulation
   }
   
   // Add the vertex ([x],[y]) to the triangulation, if possible.
-  public void addVertex(float x, float y)
+  void addVertex(float x, float y)
   {
     if (vertexCount >= vertexMax) return;
     vx[vertexCount] = x;
@@ -169,7 +48,7 @@ class Triangulation
   }
   
   // Return the triangle that vertex [v] is inside of.
-  public int findTriangle(int v)
+  int findTriangle(int v)
   {
     for (int t = 0; t < triCount; t++)
       if (inTriangle(v, tv1[t], tv2[t], tv3[t])) 
@@ -178,7 +57,7 @@ class Triangulation
   }
   
   // Compute a triangulation of the vertices (overwrites old edges/triangles).
-  public void triangulate()
+  void triangulate()
   { 
     // Start with triangle v0, v1, v2.
     if (vertexCount < 3) return;
@@ -227,7 +106,7 @@ class Triangulation
   }
   
   // Make a deep copy of this triangulation.
-  public Triangulation copy()
+  Triangulation copy()
   {
     Triangulation t = new Triangulation(vertexMax);
     
@@ -258,7 +137,7 @@ class Triangulation
   }
   
   // Test if two triangulations are equal (assuming same vertices).
-  public boolean equals(Triangulation t)
+  boolean equals(Triangulation t)
   {
     // Check the edge listing up to (a,b) = (b,a).
     if (edgeCount != t.edgeCount) return false;
@@ -274,7 +153,7 @@ class Triangulation
   }
   
   // Return whether or not [edge] can be flipped or not.
-  public boolean canFlip(int edge)
+  boolean canFlip(int edge)
   {
     int t1 = et1[edge];
     int t2 = et2[edge];
@@ -291,7 +170,7 @@ class Triangulation
            !inTriangle(v3, v1, v2, v4) && !inTriangle(v4, v1, v2, v3);
   }
   
-  public boolean inTriangle(int x, int a, int b, int c)
+  boolean inTriangle(int x, int a, int b, int c)
   {
     int ccw1 = Geom.CCW(vx[x], vy[x], vx[a], vy[a], vx[b], vy[b]);
     int ccw2 = Geom.CCW(vx[x], vy[x], vx[b], vy[b], vx[c], vy[c]);
@@ -307,7 +186,7 @@ class Triangulation
   }
   
   // precondition: canFlip(edge) is true
-  public void flip (int edge)
+  void flip (int edge)
   {
     if (!canFlip(edge)) return;
     
@@ -354,7 +233,7 @@ class Triangulation
   
   // switches the triangle entry for an edge from t1 to t2
   // precondition: t1 is in the edge to triangle map for edge.
-  public void switchTriangleEdgeMap(int edge, int t1, int t2)
+  void switchTriangleEdgeMap(int edge, int t1, int t2)
   {
     if (et1[edge] == t1)
       et1[edge] = t2;
@@ -362,7 +241,7 @@ class Triangulation
       et2[edge] = t2;
   }
 
-  public void updateTriangle(int tri, int v1, int v2, int v3,
+  void updateTriangle(int tri, int v1, int v2, int v3,
                       int e1, int e2, int e3)
   {
     tv1[tri] = v1;
@@ -374,7 +253,7 @@ class Triangulation
   }
 
   // precondition: two points are on triangle
-  public int triEdgeBetweenPoints (int tri, int v1, int v2)
+  int triEdgeBetweenPoints (int tri, int v1, int v2)
   {
     if ((v1 == tv1[tri] && v2 == tv2[tri]) ||
         (v2 == tv1[tri] && v1 == tv2[tri]))
@@ -389,7 +268,7 @@ class Triangulation
   }
   
   // precondition: edge is on triangle
-  public int triPointNotOnEdge (int tri, int edge)
+  int triPointNotOnEdge (int tri, int edge)
   {
     if (te1[tri] == edge)
       return tv3[tri];
@@ -400,7 +279,7 @@ class Triangulation
     else return -1;
   }
   
-  public int closestNode(float x, float y, float distance)
+  int closestNode(float x, float y, float distance)
   {
     if (vertexCount <= 0) return -1;
     float d = dist(x, y, vx[0], vy[0]);
@@ -421,7 +300,7 @@ class Triangulation
   }
   
   // Draw the graph.
-  public void drawGraph()
+  void drawGraph()
   {
     // Draw all the edges.
     for (int i = 0; i < edgeCount; i++)
@@ -437,10 +316,5 @@ class Triangulation
       stroke(colorNode);
       ellipse(vx[i], vy[i], 10, 10);
     }
-  }
-}
-
-  static public void main(String args[]) {
-    PApplet.main(new String[] { "--bgcolor=#FFFFFF", "flip_graph" });
   }
 }
