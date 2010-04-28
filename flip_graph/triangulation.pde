@@ -106,7 +106,7 @@ class Triangulation
   }
   
   // Make a deep copy of this triangulation.
-  Triangulation copy()
+  Triangulation clone()
   {
     Triangulation t = new Triangulation(vertexMax);
     
@@ -136,18 +136,51 @@ class Triangulation
     return t;
   }
   
+  // Object's [equals] overrided.
+  boolean equals(Object obj)
+  {
+    if (obj instanceof Triangulation)
+    {
+      boolean e1 = equals((Triangulation)obj);
+      return e1;
+    }
+    return false;
+  }
+  
+  // Object's [hashCode] overrided.
+  int hashCode()
+  {
+    // Flip some bits all over the place.
+    int h = 21;
+    for (int e = 0; e < edgeCount; e++)
+    {
+      // NOTE that we must use BITWISE XOR because it is commutative,
+      // and we don't know the ordering of the edges etc.
+      h ^= (ev1[e] ^ ev2[e]);
+      h ^= (et1[e] ^ et2[e]);
+    }
+    return h;
+  }
+  
   // Test if two triangulations are equal (assuming same vertices).
   boolean equals(Triangulation t)
   {
-    // Check the edge listing up to (a,b) = (b,a).
     if (edgeCount != t.edgeCount) return false;
     for (int e = 0; e < edgeCount; e++)
     {
-      if (!(((ev1[e] == t.ev1[e]) && (ev2[e] == t.ev2[e])) ||
-          ((ev1[e] == t.ev2[e]) && (ev2[e] == t.ev1[e]))))
+      // Find the edge in the other triangulation.
+      boolean found = false;
+      for (int eo = 0; eo < edgeCount; eo++)
       {
-        return false;
+        if ((ev1[e] == t.ev1[eo] && ev2[e] == t.ev2[eo]) ||
+            (ev1[e] == t.ev2[eo] && ev2[e] == t.ev1[eo]))
+        {
+          found = true;
+          break;
+        }
       }
+      if (!found)
+        return false;
     }
     return true;
   }
