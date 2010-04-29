@@ -242,29 +242,35 @@ class FGraph
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
+      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+      color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
       
       for (int i = 0; i < node.neighborNodes.size(); i++)
       {
         FNode nn = (FNode)node.neighborNodes.get(i);
-        stroke(colorLine, 100);
-        line(node.x, node.y, nn.x, nn.y);
+        float nnGoodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+        color nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0); 
+
+        beginShape(LINES);
+        stroke(nodeValue);
+        vertex(node.x, node.y);
+        stroke(nnValue);
+        vertex(nn.x, nn.y);
+        endShape();
+        
+//        stroke(colorLine, 100);
+//        line(node.x, node.y, nn.x, nn.y);
       }
     }
     iter = nodes.iterator();
     while (iter.hasNext())
     {
       FNode node = (FNode)iter.next();
-      fill(colorNode);
-      stroke(colorNode);
-      ellipse(node.x, node.y, 10, 10);
-    }
-    for (int i = 0; i < loopNodes.size(); i++)
-    {
-      FNode node = (FNode)loopNodes.get(i);
-      fill(0, 0, 255);
-      stroke(colorNode);
+      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+      color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
+      fill(nodeValue);
+      stroke(nodeValue);
       ellipse(node.x, node.y, 10, 10);
     }
   }
-  
 }
