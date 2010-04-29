@@ -611,6 +611,50 @@ class Triangulation
   }
   
   int countInteriorEdges()
+<<<<<<< HEAD
+=======
+  {
+    int count = 0;
+    for (int e = 0; e < edgeCount; e++)
+    {
+      // infinite edge
+      if (ev1[e] == -1 || ev2[e] == -1)
+        continue;
+      
+      // edge is on convex hull
+      if (triPointNotOnEdge(et1[e], e) == -1 ||
+          triPointNotOnEdge(et2[e], e) == -1)
+        continue;
+      
+      count++;
+    }
+    return count;
+  }
+  
+  int countDelaunayEdges()
+  {
+    int count = 0;
+    for (int e = 0; e < edgeCount; e++)
+    {
+      int a = ev1[e];
+      int b = ev2[e];
+      int c = triPointNotOnEdge(et1[e], e);
+      int d = triPointNotOnEdge(et2[e], e);
+      
+      // skip infinite triangles
+      if (a == -1 || b == -1 || c == -1 || d == -1)
+        continue;
+      
+      if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+        count++;
+    }
+    
+    return count;
+  }
+  
+  // Draw the graph.
+  void drawGraph(float lx, float ly, float ux, float uy)
+>>>>>>> 71f5c8883025c27527e058d6538814adbe0a6262
   {
     int count = 0;
     for (int e = 0; e < edgeCount; e++)
