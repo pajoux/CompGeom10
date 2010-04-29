@@ -98,7 +98,7 @@ void setup()
   textFont(font);
   
   // Set window/drawing properties.
-  size(800, 600);
+  size(800, 600, P3D);
   frameRate(25);
   smooth();
   stroke(255);

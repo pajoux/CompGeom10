@@ -5,8 +5,6 @@ class FNode
   boolean marked;
   float level;
   
-  boolean fixed;
-  
   // Embedding data.
   float x, y, z;
   
@@ -24,7 +22,6 @@ class FNode
     tri = t;
     level = 1.0;
     backNode = null;
-    fixed = false;
     z = random(-500, 500);
   }
   
@@ -38,7 +35,6 @@ class FGraph
 {
   HashMap hm;
   FNode root;
-  ArrayList loopNodes;
   
   // Build a flip graph from a given triangulation.
   FGraph(Triangulation t)
@@ -98,8 +94,9 @@ class FGraph
           
           // If we create it, compute it's position.
           float r = (float)(((2 * Math.PI) / ncount) * i);
-          nodeFlip.x = random(0, width);
-          nodeFlip.y = random(0, height);
+          nodeFlip.x = random(0, width);  //(20 * (8 - node.level)) * (float)Math.cos(r) + node.x;
+          nodeFlip.y = random(0, height); //(20 * (8 - node.level)) * (float)Math.sin(r) + node.y;
+          nodeFlip.level = node.level + 1.0;
           i += 1;
         }
         
@@ -142,7 +139,7 @@ class FGraph
     }
     // Now build a list of the nodes.
     FNode stop = follow;
-    loopNodes = new ArrayList();
+    ArrayList loopNodes = new ArrayList();
     for (follow = loopNodeA; !follow.tri.equals(stop.tri); follow = follow.backNode)
     {
       loopNodes.add(follow);
@@ -191,20 +188,18 @@ class FGraph
     HashMap fixed = new HashMap();
     Collection nodes = hm.values();
     Iterator iter = nodes.iterator();
-    
-    float pid = (float)((Math.PI * 2.0) / (loopNodes.size()));
-    for (int i = 0; i < loopNodes.size(); i++)
+    int i = 0;
+    while (iter.hasNext() && i < 5 && i < hm.size())
     {
-      FNode node = (FNode)loopNodes.get(i);
-      node.x = cos(pid * i) * 300 + width / 2.0;
-      node.y = sin(pid * i) * 300 + height / 2.0;
+      FNode node = (FNode)iter.next();
       fixed.put(node.tri, node);
+      i++;
     }
     
     println("tired");
     
     // Now relax the inner points for a while.
-    for (int i = 0; i < 200; i++)
+    for (i = 0; i < 200; i++)
     {
       nodes = hm.values();
       iter = nodes.iterator();
@@ -248,13 +243,6 @@ class FGraph
     {
       FNode node = (FNode)iter.next();
       fill(colorNode);
-      stroke(colorNode);
-      ellipse(node.x, node.y, 10, 10);
-    }
-    for (int i = 0; i < loopNodes.size(); i++)
-    {
-      FNode node = (FNode)loopNodes.get(i);
-      fill(0, 0, 255);
       stroke(colorNode);
       ellipse(node.x, node.y, 10, 10);
     }
