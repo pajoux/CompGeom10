@@ -5,13 +5,8 @@ class FNode
   boolean marked;
   float level;
   
-  boolean fixed;
-  
   // Embedding data.
-  float x, y, z;
-  
-  // Backtrack
-  FNode backNode;
+  float x, y;
   
   // Graph data.
   Triangulation tri;
@@ -23,9 +18,6 @@ class FNode
     neighborNodes = new ArrayList();
     tri = t;
     level = 1.0;
-    backNode = null;
-    fixed = false;
-    z = random(-500, 500);
   }
   
   void addNeighbor(FNode node)
@@ -38,7 +30,6 @@ class FGraph
 {
   HashMap hm;
   FNode root;
-  ArrayList loopNodes;
   
   // Build a flip graph from a given triangulation.
   FGraph(Triangulation t)
@@ -59,16 +50,14 @@ class FGraph
     queue.addLast(root);
     hm.put(t, root);
     
-    // Loop
-    FNode loopNodeA = null, loopNodeB = null;
-    
     while (!queue.isEmpty())
     {
       // Get the next triangulation to work with.
       FNode node = (FNode)queue.removeFirst();
       Triangulation tri = node.tri;
       
-      // Mark the node.
+      // If we already finished this node, skip it.
+      if (node.marked) continue;
       node.marked = true;
 
       // Count how many neighbors we will have.
@@ -98,67 +87,20 @@ class FGraph
           
           // If we create it, compute it's position.
           float r = (float)(((2 * Math.PI) / ncount) * i);
-          nodeFlip.x = random(0, width);
-          nodeFlip.y = random(0, height);
+          nodeFlip.x = random(0, width);  //(20 * (8 - node.level)) * (float)Math.cos(r) + node.x;
+          nodeFlip.y = random(0, height); //(20 * (8 - node.level)) * (float)Math.sin(r) + node.y;
+          nodeFlip.level = node.level + 1.0;
           i += 1;
         }
         
-        // If we already finished this node, don't add it, and mark the loop.
-        if (nodeFlip.marked)
-        {
-          if (node.backNode != nodeFlip)
-          {
-            loopNodeA = node;
-            loopNodeB = nodeFlip;
-          }
-        }
-        else
-        {
-          // Add a back pointer to the node.
-          nodeFlip.backNode = node;
-          // Push it to the queue to be processed later.
-          queue.addLast(nodeFlip);
-        }
+        // Push it to the queue to be processed later.
+        queue.addLast(nodeFlip);
+        
         // Add it as a neighbor.
         node.addNeighbor(nodeFlip);
       }
     }
     println("There are " + hm.size() + " nodes in the flip graph!");
-    
-    // Get the loop.
-    HashSet loopSet = new HashSet();
-    FNode follow = loopNodeA;
-    while (follow.backNode != null)
-    {
-      loopSet.add(follow.tri);
-      follow = follow.backNode;
-    }
-    // Find the shared node in the loop.
-    follow = loopNodeB;
-    while (follow.backNode != null)
-    {
-      if (loopSet.contains(follow.tri)) break;
-      follow = follow.backNode;
-    }
-    // Now build a list of the nodes.
-    FNode stop = follow;
-    loopNodes = new ArrayList();
-    for (follow = loopNodeA; !follow.tri.equals(stop.tri); follow = follow.backNode)
-    {
-      loopNodes.add(follow);
-    }
-    loopNodes.add(stop);
-    ArrayList loopNodesRev = new ArrayList();
-    for (follow = loopNodeB; !follow.tri.equals(stop.tri); follow = follow.backNode)
-    {
-      loopNodesRev.add(follow);
-    }
-    for (int i = loopNodesRev.size() - 1; i >= 0; i--)
-    {
-      loopNodes.add(loopNodesRev.get(i));
-    }
-    
-    println("loop nodes size: " + loopNodes.size());
   }
   
   FNode closestNode(float x, float y, float distance)
@@ -191,20 +133,18 @@ class FGraph
     HashMap fixed = new HashMap();
     Collection nodes = hm.values();
     Iterator iter = nodes.iterator();
-    
-    float pid = (float)((Math.PI * 2.0) / (loopNodes.size()));
-    for (int i = 0; i < loopNodes.size(); i++)
+    int i = 0;
+    while (iter.hasNext() && i < 5 && i < hm.size())
     {
-      FNode node = (FNode)loopNodes.get(i);
-      node.x = cos(pid * i) * 300 + width / 2.0;
-      node.y = sin(pid * i) * 300 + height / 2.0;
+      FNode node = (FNode)iter.next();
       fixed.put(node.tri, node);
+      i++;
     }
     
     println("tired");
     
     // Now relax the inner points for a while.
-    for (int i = 0; i < 200; i++)
+    for (i = 0; i < 200; i++)
     {
       nodes = hm.values();
       iter = nodes.iterator();
@@ -235,27 +175,34 @@ class FGraph
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
+      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+      color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
       
       for (int i = 0; i < node.neighborNodes.size(); i++)
       {
         FNode nn = (FNode)node.neighborNodes.get(i);
-        stroke(colorLine, 100);
-        line(node.x, node.y, nn.x, nn.y);
+        float nnGoodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+        color nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0); 
+
+        beginShape(LINES);
+        stroke(nodeValue);
+        vertex(node.x, node.y);
+        stroke(nnValue);
+        vertex(nn.x, nn.y);
+        endShape();
+        
+//        stroke(colorLine, 100);
+//        line(node.x, node.y, nn.x, nn.y);
       }
     }
     iter = nodes.iterator();
     while (iter.hasNext())
     {
       FNode node = (FNode)iter.next();
-      fill(colorNode);
-      stroke(colorNode);
-      ellipse(node.x, node.y, 10, 10);
-    }
-    for (int i = 0; i < loopNodes.size(); i++)
-    {
-      FNode node = (FNode)loopNodes.get(i);
-      fill(0, 0, 255);
-      stroke(colorNode);
+      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+      color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
+      fill(nodeValue);
+      stroke(nodeValue);
       ellipse(node.x, node.y, 10, 10);
     }
   }

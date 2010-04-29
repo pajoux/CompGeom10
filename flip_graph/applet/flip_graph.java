@@ -1,3 +1,124 @@
+import processing.core.*; 
+import processing.xml.*; 
+
+import java.applet.*; 
+import java.awt.Dimension; 
+import java.awt.Frame; 
+import java.awt.event.MouseEvent; 
+import java.awt.event.KeyEvent; 
+import java.awt.event.FocusEvent; 
+import java.awt.Image; 
+import java.io.*; 
+import java.net.*; 
+import java.text.*; 
+import java.util.*; 
+import java.util.zip.*; 
+import java.util.regex.*; 
+
+public class flip_graph extends PApplet {
+
+
+// Aesthetics - Color properties, etc.
+int colorBackground = color(61, 61, 61);
+int colorNode = color(219, 171, 206);
+int colorLine = color(171, 206, 219);
+
+// Input Graph
+Triangulation graph = new Triangulation(11);
+
+// Interactivity
+int nodeSelected = -1;
+int edge = 3;
+
+public void mousePressed()
+{
+  // Only do stuff on LEFT mouse click.
+  if (mouseButton != LEFT) return;
+  
+  // Check to see if we aren't on top of another node.
+  nodeSelected = graph.closestNode(mouseX, mouseY, 6);
+  if (nodeSelected == -1)
+  {
+    graph.addVertex(mouseX, mouseY);
+    graph.triangulate();
+  }
+}
+
+public void mouseDragged()
+{
+  // Only drag a node if we selected one.
+  if (nodeSelected == -1) return;
+  graph.vx[nodeSelected] = mouseX;
+  graph.vy[nodeSelected] = mouseY;
+  graph.triangulate();
+}
+
+public void setup()
+{
+  // Set the font for drawing text with.
+  PFont font = createFont("Verdana", 12);
+  textFont(font);
+  
+  // Set window/drawing properties.
+  size(800, 600);
+  frameRate(25);
+  smooth();
+  stroke(255);
+  background(0, 0, 0);
+}
+
+public void draw() 
+{
+  // Draw the background.
+  background(colorBackground);
+  
+  // Draw the graph.
+  graph.drawGraph();
+  
+  // Add an FPS counter.
+  fill(255);
+  text("FPS: " + round(frameRate), 0, 12);
+  
+  if (graph.vertexCount >= graph.vertexMax)
+  {
+    graph.flip(edge);
+    edge += 1;
+    if (edge >= graph.edgeCount) edge = 3;
+  }
+}
+
+
+// Namespace containing some standard geometric functions.
+static class Geom
+{
+  // Counter-Clockwise Predicate.
+  //   + Return 1  if (a,b,c) are CCW-oriented
+  //   + Return 0  if (a,b,c) are colinear
+  //   + Return -1 if (a,b,c) are CW-oriented 
+  public static int CCW(float a_x, float a_y, float b_x, float b_y, float c_x, float c_y)
+  {
+    float r1_x = a_x - c_x;
+    float r1_y = a_y - c_y;
+    float r2_x = b_x - c_x;
+    float r2_y = b_y - c_y;
+    float det  = r1_x * r2_y - r2_x * r1_y;
+    if (det > 0)
+      return 1;
+    else if (det == 0)
+      return 0;
+    else
+      return -1;
+  }
+
+  // Line-segment Intersection.
+  //   + Return true if line-segment [a1,a2] intersects [b1,b2]
+  //   + Assumes general-position.
+  public static boolean lineIntersection(float a1_x, float a1_y, float a2_x, float a2_y, float b1_x, float b1_y, float b2_x, float b2_y)
+  {
+    return (CCW(a1_x, a1_y, a2_x, a2_y, b1_x, b1_y) != CCW(a1_x, a1_y, a2_x, a2_y, b2_x, b2_y)) &&
+           (CCW(b1_x, b1_y, b2_x, b2_y, a1_x, a1_y) != CCW(b1_x, b1_y, b2_x, b2_y, a2_x, a2_y));
+  }
+}
 
 // Holds a planar embedding and triangulation of a set of 2D vertices.
 class Triangulation
@@ -40,7 +161,7 @@ class Triangulation
   }
   
   // Add the vertex ([x],[y]) to the triangulation, if possible.
-  void addVertex(float x, float y)
+  public void addVertex(float x, float y)
   {
     if (vertexCount >= vertexMax) return;
     vx[vertexCount] = x;
@@ -49,7 +170,7 @@ class Triangulation
   }
   
   // Return the triangle that vertex [v] is inside of.
-  int findTriangle(int v)
+  public int findTriangle(int v)
   {
     for (int t = 0; t < triCount; t++)
       if (inTriangle(v, tv1[t], tv2[t], tv3[t])) 
@@ -59,7 +180,7 @@ class Triangulation
   }
   
   // Compute a triangulation of the vertices (overwrites old edges/triangles).
-  void triangulate()
+  public void triangulate()
   { 
     // Start with triangle v0, v1, v2.
     if (vertexCount < 3) return;
@@ -93,7 +214,7 @@ class Triangulation
     }
   }
   
-  void addPointInTriangulation(int v)
+  public void addPointInTriangulation(int v)
   {
     ArrayList triHits = new ArrayList();
     for (int t = 0; t < triCount; t++)
@@ -116,14 +237,15 @@ class Triangulation
       for (int i = 0; i < triHits.size(); i++)
       {
         int t = ((Integer)triHits.get(i)).intValue();
+        replaceInfinitePoint(t, v);
         
         int v1, v2;
-        if (tv1[t] == -1)
+        if (tv1[t] == v)
         {
           v1 = tv2[t];
           v2 = tv3[t]; 
         }
-        else if (tv2[t] == -1)
+        else if (tv2[t] == v)
         {
           v1 = tv1[t];
           v2 = tv3[t]; 
@@ -136,7 +258,7 @@ class Triangulation
                          
         // determine which edge is "left"
         int vLeft, vRight;
-        if (Geom.CCW(vx[v], vy[v], vx[v1], vy[v1], vx[v2], vy[v2]) == -1) 
+        if (Geom.CCW(vx[v], vy[v], vx[v1], vy[v1], vx[v2], vx[v2]) == -1) 
         {
           vRight = v2;
           vLeft = v1;
@@ -147,8 +269,8 @@ class Triangulation
           vLeft = v2;
         }
 
-        int eLeft = triEdgeBetweenPoints(t, -1, vLeft);
-        int eRight = triEdgeBetweenPoints(t, -1, vRight);
+        int eLeft = triEdgeBetweenPoints(t, v, vLeft);
+        int eRight = triEdgeBetweenPoints(t, v, vRight);
         
         // check to see if these points are the maximum "left" or "right"
         if (infRightPoint == -1 || Geom.CCW(vx[v], vy[v], vx[infRightPoint], vy[infRightPoint], vx[vRight], vy[vRight]) == -1)
@@ -157,93 +279,43 @@ class Triangulation
           infRightPoint = vRight; 
           infRightTri = t;
         }
-        if (infLeftPoint == -1 || Geom.CCW(vx[v], vy[v], vx[infLeftPoint], vy[infLeftPoint], vx[vLeft], vy[vLeft]) == 1)
+        if (infLeftPoint == -1 || Geom.CCW(vx[v], vy[v], vx[infRightPoint], vy[infLeftPoint], vx[vLeft], vy[vLeft]) == 1)
         {
           infLeftEdge = eLeft;
           infLeftPoint = vLeft; 
           infLeftTri = t;
         }
       }
-
-      int eTentLeft = edgeCount++;
-      int eTentRight = edgeCount++;
+      
+      // infinite edges
+      int eInfLeft = edgeCount++;
+      int eInfRight = edgeCount++;
       int eInfV = edgeCount++;
       
       int tInfLeft = triCount++;
       int tInfRight = triCount++;
       
-      ev1[eTentLeft] = v; ev2[eTentLeft] = infLeftPoint;
-      et1[eTentLeft] = infLeftTri; et2[eTentLeft] = tInfLeft;
-      ev1[eTentRight] = v; ev2[eTentRight] = infRightPoint;
-      et1[eTentRight] = infRightTri; et2[eTentRight] = tInfRight;
+      ev1[eInfLeft] = -1; ev2[eInfLeft] = infLeftPoint;
+      et1[eInfLeft] = infLeftTri; et2[eInfLeft] = tInfLeft;
+      ev1[eInfRight] = -1; ev2[eInfRight] = infRightPoint;
+      et1[eInfRight] = infRightTri; et1[eInfRight] = tInfRight;
       ev1[eInfV] = -1; ev2[eInfV] = v;
-      et1[eInfV] = tInfLeft; et2[eInfV] = tInfRight;
-      
-      replaceEdgeTriangle(infRightEdge, infRightTri, tInfRight);
-      replaceEdgeTriangle(infLeftEdge, infLeftTri, tInfLeft);
+      et1[eInfV] = tInfLeft; et1[eInfV] = tInfRight;
       
       // now we need to create two new infinite triangle for v
       tv1[tInfLeft] = v; tv2[tInfLeft] = infLeftPoint; tv3[tInfLeft] = -1;
-      te1[tInfLeft] = eTentLeft; te2[tInfLeft] = infLeftEdge; te3[tInfLeft] = eInfV;
+      te1[tInfLeft] = infLeftEdge; te2[tInfLeft] = eInfLeft; te3[tInfLeft] = eInfV;
       
       tv1[tInfRight] = v; tv2[tInfRight] = infRightPoint; tv3[tInfRight] = -1;
-      te1[tInfRight] = eTentRight; te2[tInfRight] = infRightEdge; te3[tInfRight] = eInfV;
-      
-      for (int i = 0; i < triHits.size(); i++)
-      {
-        int t = ((Integer)triHits.get(i)).intValue();
-
-        // preserve the edges on the boundary of the tent
-        // as these are used by other infinite triangles
-        // that we aren't updating
-        if (t == infLeftTri)
-          replaceTriangleEdge(t, infLeftEdge, eTentLeft);
-        else if (t == infRightTri)
-          replaceTriangleEdge(t, infRightEdge, eTentRight);
-
-        updateInfiniteEdges(t, v);
-        replaceTrianglePoint(t, -1, v);
-      }
-
-      for (int i = 0; i < triCount; i++)
-      {
-        checkTriangle(i);
-      }
+      te1[tInfRight] = infRightEdge; te2[tInfRight] = eInfRight; te3[tInfRight] = eInfV;
     }
   }
-
-  void replaceEdgeTriangle(int e, int tOld, int tNew)
-  {
-    if (et1[e] == tOld)
-      et1[e] = tNew;
-    else if (et2[e] == tOld)
-      et2[e] = tNew;
-  }
   
-  void replaceTriangleEdge(int t, int eOld, int eNew)
-  {
-    if (te1[t] == eOld)
-      te1[t] = eNew;  
-    else if (te2[t] == eOld)
-      te2[t] = eNew;  
-    else if (te3[t] == eOld)
-      te3[t] = eNew;
-  }
-
-  void replaceTrianglePoint(int t, int vOld, int vNew)
-  {
-    if (tv1[t] == vOld)
-      tv1[t] = vNew;
-    else if (tv2[t] == vOld)
-      tv2[t] = vNew;
-    else if (tv3[t] == vOld)
-      tv3[t] = vNew;
-  }  
-
-  void updateInfiniteEdges(int t, int v)
+  public void replaceInfinitePoint(int v, int t)
   {
     if (tv1[t] == -1)
     {
+      tv1[t] = v;
       // the edge could have already been replaced by
       // a previous call to replaceInfinitePoint
       if (ev1[te1[t]] == -1)
@@ -260,6 +332,7 @@ class Triangulation
     }
     else if (tv2[t] == -1)
     {
+      tv2[t] = v;
       // the edge could have already been replaced by
       // a previous call to replaceInfinitePoint
       if (ev1[te1[t]] == -1)
@@ -274,8 +347,9 @@ class Triangulation
       else if (ev2[te2[t]] == -1)
         ev2[te2[t]] = v;            
     }
-    else if (tv3[t] == -1)
+    else
     {
+      tv3[t] = v;
       // the edge could have already been replaced by
       // a previous call to replaceInfinitePoint
       if (ev1[te3[t]] == -1)
@@ -292,7 +366,7 @@ class Triangulation
     }
   }
   
-  void addPointInTriangle(int v, int t)
+  public void addPointInTriangle(int v, int t)
   {
     int e1 = te1[t], e2 = te2[t], e3 = te3[t];
 
@@ -312,9 +386,9 @@ class Triangulation
     // triangle 1
     tv3[t] = v; te2[t] = edgeCount+1; te3[t] = edgeCount;
     
-//    println("triangle1 " + tv1[t] + ", " + tv2[t] + ", " + tv3[t]);
-//    println("triangle2 " + tv1[triCount] + ", " + tv2[triCount] + ", " + tv3[triCount]);
-//    println("triangle3 " + tv1[triCount+1] + ", " + tv2[triCount+1] + ", " + tv3[triCount+1]);
+    println("triangle1 " + tv1[t] + ", " + tv2[t] + ", " + tv3[t]);
+    println("triangle2 " + tv1[triCount] + ", " + tv2[triCount] + ", " + tv3[triCount]);
+    println("triangle3 " + tv1[triCount+1] + ", " + tv2[triCount+1] + ", " + tv3[triCount+1]);
     
     // Update the edge-triangle stuff.
     if (e1 == -1) { } else if (et1[e1] == t) { et1[e1] = t; et2[e1] = et2[e1]; } else { et1[e1] = et1[e1]; et2[e1] = t; }
@@ -330,7 +404,7 @@ class Triangulation
   }
   
   // Make a deep copy of this triangulation.
-  Triangulation clone()
+  public Triangulation copy()
   {
     Triangulation t = new Triangulation(vertexMax);
     
@@ -360,57 +434,24 @@ class Triangulation
     return t;
   }
   
-  // Object's [equals] overrided.
-  boolean equals(Object obj)
-  {
-    if (obj instanceof Triangulation)
-    {
-      boolean e1 = equals((Triangulation)obj);
-      return e1;
-    }
-    return false;
-  }
-  
-  // Object's [hashCode] overrided.
-  int hashCode()
-  {
-    // Flip some bits all over the place.
-    int h = 21;
-    for (int e = 0; e < edgeCount; e++)
-    {
-      // NOTE that we must use BITWISE XOR because it is commutative,
-      // and we don't know the ordering of the edges etc.
-      h ^= (ev1[e] ^ ev2[e]);
-      h ^= (et1[e] ^ et2[e]);
-    }
-    return h;
-  }
-  
   // Test if two triangulations are equal (assuming same vertices).
-  boolean equals(Triangulation t)
+  public boolean equals(Triangulation t)
   {
+    // Check the edge listing up to (a,b) = (b,a).
     if (edgeCount != t.edgeCount) return false;
     for (int e = 0; e < edgeCount; e++)
     {
-      // Find the edge in the other triangulation.
-      boolean found = false;
-      for (int eo = 0; eo < edgeCount; eo++)
+      if (!(((ev1[e] == t.ev1[e]) && (ev2[e] == t.ev2[e])) ||
+          ((ev1[e] == t.ev2[e]) && (ev2[e] == t.ev1[e]))))
       {
-        if ((ev1[e] == t.ev1[eo] && ev2[e] == t.ev2[eo]) ||
-            (ev1[e] == t.ev2[eo] && ev2[e] == t.ev1[eo]))
-        {
-          found = true;
-          break;
-        }
-      }
-      if (!found)
         return false;
+      }
     }
     return true;
   }
   
   // Return whether or not [edge] can be flipped or not.
-  boolean canFlip(int edge)
+  public boolean canFlip(int edge)
   {
     int t1 = et1[edge];
     int t2 = et2[edge];
@@ -428,7 +469,7 @@ class Triangulation
            !inTriangle(v3, v1, v2, v4) && !inTriangle(v4, v1, v2, v3);
   }
     
-  boolean inInfiniteTriangle(int x, int a, int b)
+  public boolean inInfiniteTriangle(int x, int a, int b)
   {
     int ccw_x = ccw_x = Geom.CCW(vx[x], vy[x], vx[a], vy[a], vx[b], vy[b]);
     int ccw_i = -1;
@@ -464,7 +505,7 @@ class Triangulation
       return ccw_x != ccw_i;  // x is outside the convex hull
   }
   
-  boolean inTriangle(int x, int a, int b, int c)
+  public boolean inTriangle(int x, int a, int b, int c)
   {
     // the case where one of the points is the infinite point
     // degenerates to a line-side test
@@ -489,7 +530,7 @@ class Triangulation
   }
   
   // precondition: canFlip(edge) is true
-  void flip (int edge)
+  public void flip (int edge)
   {
     if (!canFlip(edge)) return;
     
@@ -529,14 +570,14 @@ class Triangulation
     // edge to triangle map
     switchTriangleEdgeMap(te2[tri1], tri2, tri1);
     
-    // since edge te2[tri1] switched from triangle 1 to triangle 2, we need to update this in thef
+    // since edge te2[tri1] switched from triangle 1 to triangle 2, we need to update this in the
     // edge to triangle map
     switchTriangleEdgeMap(te2[tri2], tri1, tri2);
   }
   
   // switches the triangle entry for an edge from t1 to t2
   // precondition: t1 is in the edge to triangle map for edge.
-  void switchTriangleEdgeMap(int edge, int t1, int t2)
+  public void switchTriangleEdgeMap(int edge, int t1, int t2)
   {
     if (et1[edge] == t1)
       et1[edge] = t2;
@@ -544,7 +585,7 @@ class Triangulation
       et2[edge] = t2;
   }
 
-  void updateTriangle(int tri, int v1, int v2, int v3,
+  public void updateTriangle(int tri, int v1, int v2, int v3,
                       int e1, int e2, int e3)
   {
     tv1[tri] = v1;
@@ -556,7 +597,7 @@ class Triangulation
   }
 
   // precondition: two points are on triangle
-  int triEdgeBetweenPoints (int tri, int v1, int v2)
+  public int triEdgeBetweenPoints (int tri, int v1, int v2)
   {
     if ((v1 == tv1[tri] && v2 == tv2[tri]) ||
         (v2 == tv1[tri] && v1 == tv2[tri]))
@@ -568,14 +609,11 @@ class Triangulation
              (v2 == tv3[tri] && v1 == tv1[tri]))
       return te3[tri];
     else
-    {
-      println("Unable to find triEdgeBetweenPoints(" + tri + ", " + v1 + ", " + v2 + ")");
       return -1;
-    }
   }
   
   // precondition: edge is on triangle
-  int triPointNotOnEdge (int tri, int edge)
+  public int triPointNotOnEdge (int tri, int edge)
   {
     if (te1[tri] == edge)
       return tv3[tri];
@@ -583,14 +621,10 @@ class Triangulation
       return tv1[tri];
     else if (te3[tri] == edge)
       return tv2[tri];
-    else
-    {
-      println("Unable to find triPointNotOnEdge(" + tri + ", " + edge + ")");
-      return -1;
-    }
+    else return -1;
   }
   
-  int closestNode(float x, float y, float distance)
+  public int closestNode(float x, float y, float distance)
   {
     if (vertexCount <= 0) return -1;
     float d = dist(x, y, vx[0], vy[0]);
@@ -610,62 +644,14 @@ class Triangulation
       return -1;
   }
   
-  int countInteriorEdges()
-  {
-    int count = 0;
-    for (int e = 0; e < edgeCount; e++)
-    {
-      // infinite edge
-      if (ev1[e] == -1 || ev2[e] == -1)
-        continue;
-      
-      // edge is on convex hull
-      if (triPointNotOnEdge(et1[e], e) == -1 ||
-          triPointNotOnEdge(et2[e], e) == -1)
-        continue;
-      
-      count++;
-    }
-    return count;
-  }
-  
-  int countDelaunayEdges()
-  {
-    int count = 0;
-    for (int e = 0; e < edgeCount; e++)
-    {
-      int a = ev1[e];
-      int b = ev2[e];
-      int c = triPointNotOnEdge(et1[e], e);
-      int d = triPointNotOnEdge(et2[e], e);
-      
-      // skip infinite triangles
-      if (a == -1 || b == -1 || c == -1 || d == -1)
-        continue;
-      
-      if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
-        count++;
-    }
-    
-    return count;
-  }
-  
   // Draw the graph.
-  void drawGraph()
+  public void drawGraph()
   {
-    // Draw all triangles.
-/*    for (int i = 0; i < triCount; i++)
-    {
-      stroke(color(255, 0, 0));
-      drawEdge(te1[i]);
-      drawEdge(te2[i]);
-      drawEdge(te3[i]);
-    }
-*/
     // Draw all the edges.
     for (int i = 0; i < edgeCount; i++)
     {
       stroke(colorLine);
+      // do not draw infinite edges
       drawEdge(i);
     }
     
@@ -677,61 +663,27 @@ class Triangulation
       text(i, vx[i]+5, vy[i]+5);
       ellipse(vx[i], vy[i], 10, 10);
     }
+    
+    // Draw all triangles.
+    for (int i = 0; i < triCount; i++)
+    {
+      stroke(color(255, 0, 0));
+      drawEdge(te1[i]);
+      drawEdge(te2[i]);
+      drawEdge(te3[i]);
+    }
   }
   
-  void drawEdge (int edge)
+  public void drawEdge (int edge)
   {
     if (ev1[edge] == -1 || ev2[edge] == -1)
       return;
 
-    int x_mid = (int)((vx[ev1[edge]] + vx[ev2[edge]]) / 2);
-    int y_mid = (int)((vy[ev1[edge]] + vy[ev2[edge]]) / 2);
-    text(edge, x_mid + 5, y_mid + 5);
     line(vx[ev1[edge]], vy[ev1[edge]], vx[ev2[edge]], vy[ev2[edge]]);    
   }
-  
-  void checkTriangle (int t)
-  {
-    if ((ev1[te1[t]] != tv1[t] || ev2[te1[t]] != tv2[t]) &&
-        (ev2[te1[t]] != tv1[t] || ev1[te1[t]] != tv2[t]))
-    {
-      println("ev[te1] broken");
-      printTriangle(t);
-    }
-    if ((ev1[te2[t]] != tv2[t] || ev2[te2[t]] != tv3[t]) &&
-        (ev2[te2[t]] != tv2[t] || ev1[te2[t]] != tv3[t]))
-    {
-      println("ev[te2] broken");
-      printTriangle(t);
-    }
-    if ((ev1[te3[t]] != tv1[t] || ev2[te3[t]] != tv3[t]) &&
-        (ev2[te3[t]] != tv1[t] || ev1[te3[t]] != tv3[t]))
-    {
-      println("ev[te3] broken");
-      printTriangle(t);
-    }
-    if (et1[te1[t]] != t && et2[te1[t]] != t)
-    {
-      println("et[te1] broken");
-      printTriangle(t);
-    }
-    if (et1[te2[t]] != t && et2[te2[t]] != t)
-    {
-      println("et[te2] broken");
-      printTriangle(t);
-    }
-    if (et1[te3[t]] != t && et2[te3[t]] != t)
-    {
-      println("et[te3] broken");
-      printTriangle(t);
-    }
-  }
+}
 
-  void printTriangle (int t)
-  {
-    println("Triangle: " + t);
-    println("Vertices: " + tv1[t] + " " + tv2[t] + " " + tv3[t]);
-    println("Edges: " + te1[t] + " " + te2[t] + " " + te3[t]); 
-    println("Edges: (" + ev1[te1[t]] + "," + ev2[te1[t]] + ") (" + ev1[te2[t]] + "," + ev2[te2[t]] + ") (" + ev1[te3[t]] + "," + ev2[te3[t]] + ")");
+  static public void main(String args[]) {
+    PApplet.main(new String[] { "--bgcolor=#F0F0F0", "flip_graph" });
   }
 }
