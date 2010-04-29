@@ -2,6 +2,10 @@
 // Holds a planar embedding and triangulation of a set of 2D vertices.
 class Triangulation
 {
+  // Some triangulation properties.
+  int delaunayEdgeCount = -1;
+  int interiorEdgeCount = -1;
+  
   // Vertices.
   int vertexMax, vertexCount;
   float[] vx, vy;
@@ -91,6 +95,10 @@ class Triangulation
       // record the triCount before adding a bunch of triangles
       addPointInTriangulation(v);
     }
+    
+    // Update some properties.
+    delaunayEdgeCount = countDelaunayEdges();
+    interiorEdgeCount = countInteriorEdges();
   }
   
   void addPointInTriangulation(int v)
@@ -532,6 +540,10 @@ class Triangulation
     // since edge te2[tri1] switched from triangle 1 to triangle 2, we need to update this in thef
     // edge to triangle map
     switchTriangleEdgeMap(te2[tri2], tri1, tri2);
+    
+    // Update some properties.
+    delaunayEdgeCount = countDelaunayEdges();
+    interiorEdgeCount = countInteriorEdges();
   }
   
   // switches the triangle entry for an edge from t1 to t2

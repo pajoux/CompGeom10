@@ -32,6 +32,8 @@ float triSmallWidth  = widthInit / 5.0;
 float triSmallHeight = heightInit / 5.0;
 float triAnim = 1.0;
 
+PGraphics pg;
+
 // Input Graph
 FGraph fgraph = null;
 FNode node;
@@ -103,10 +105,22 @@ void mousePressed()
 void mouseDragged()
 {
   // Only drag a node if we selected one.
-  if (nodeSelected == -1) return;
-  tri.vx[nodeSelected] = mouseX;
-  tri.vy[nodeSelected] = mouseY;
-  tri.triangulate();
+  switch (mouseMode)
+  {
+    case MODE_TRI:
+    {
+      if (nodeSelected == -1) return;
+      tri.vx[nodeSelected] = mouseX;
+      tri.vy[nodeSelected] = mouseY;
+      tri.triangulate();
+      break;
+    }
+    case MODE_FLIP:
+    {
+      fgraph.rotation += ((mouseX - pmouseX) / 180.0 * PI);
+      break;
+    }
+  }
 }
 
 void setup()
@@ -119,6 +133,8 @@ void setup()
   size(widthInit, heightInit);
   frameRate(25);
   smooth();
+  
+  pg = createGraphics(widthInit, heightInit, P3D);
 }
 
 void draw() 
@@ -130,8 +146,8 @@ void draw()
   if (mouseMode == MODE_FLIP)
   {
     // Draw it.
-    fgraph.draw();
-    node = fgraph.closestNode(mouseX, mouseY, 20);
+    node = fgraph.closestNode(mouseX, mouseY, 10);
+    fgraph.draw(node);
     
     // Draw a "fade" in.
     if (animMode == ANIM_TRI_SHRINK)
@@ -155,22 +171,22 @@ void draw()
   float s = 1.0 - triAnim;
   tri.drawGraph(0, 0, s * triSmallWidth + triAnim * width, s * triSmallHeight + triAnim * height);
   
-  // Draw the neighbors for the flip graph.
-  if (node != null)
-  {
-    int count = node.neighborNodes.size();
-    for (int i = 0; i < count; i++)
-    {
-      FNode nn = (FNode)node.neighborNodes.get(i);
-      stroke(100, 20, 20);
-      line(node.x, node.y, nn.x, nn.y);
-    }
-    
-    fill(255, 0, 0);
-    stroke(255, 0, 0);
-    ellipse(node.x, node.y, 10, 10);
-  }
-  
+//  // Draw the neighbors for the flip graph.
+//  if (node != null)
+//  {
+//    int count = node.neighborNodes.size();
+//    for (int i = 0; i < count; i++)
+//    {
+//      FNode nn = (FNode)node.neighborNodes.get(i);
+//      stroke(100, 20, 20);
+//      line(node.x, node.y, nn.x, nn.y);
+//    }
+//    
+//    fill(255, 0, 0);
+//    stroke(255, 0, 0);
+//    ellipse(node.x, node.y, 10, 10);
+//  }
+//  
   // Add an FPS counter.
   fill(255);
   text("FPS: " + round(frameRate), width - 50, 12);

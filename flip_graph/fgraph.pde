@@ -2,9 +2,9 @@
 
 class FNode
 {
+  FGraph graph;
   boolean marked;
   float level;
-  
   boolean fixed;
   
   // Embedding data.
@@ -39,10 +39,13 @@ class FGraph
   HashMap hm;
   FNode root;
   ArrayList loopNodes;
-  
+  float rotation = 0.0;
+  int minDelaunayEdges;
+    
   // Build a flip graph from a given triangulation.
   FGraph(Triangulation t)
   {
+    minDelaunayEdges = t.interiorEdgeCount;
     bfs(t);
     //embedify();
   }
@@ -67,7 +70,8 @@ class FGraph
       // Get the next triangulation to work with.
       FNode node = (FNode)queue.removeFirst();
       Triangulation tri = node.tri;
-      
+      minDelaunayEdges = min(node.tri.delaunayEdgeCount, minDelaunayEdges);
+
       // Mark the node.
       node.marked = true;
 
@@ -165,13 +169,13 @@ class FGraph
   {
     Collection nodes = hm.values();
     Iterator iter = nodes.iterator();
-    float d = dist(x, y, root.x, root.y);
+    float d = dist(x, y, pg.screenX(root.x, root.y, root.z), pg.screenY(root.x, root.y, root.z));
     FNode nn = root;
     while (iter.hasNext())
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
-      float td = dist(x, y, node.x, node.y);
+      float td = dist(x, y, pg.screenX(node.x, node.y, node.z), pg.screenY(node.x, node.y, node.z));
       if (td < d)
       {
         d = td;
@@ -196,8 +200,8 @@ class FGraph
     for (int i = 0; i < loopNodes.size(); i++)
     {
       FNode node = (FNode)loopNodes.get(i);
-      node.x = cos(pid * i) * width / 3.0 + width / 2.0;
-      node.y = sin(pid * i) * height / 3.0 + height / 2.0;
+      node.x = cos(pid * i) * width / 3.0;
+      node.y = sin(pid * i) * height / 3.0;
       fixed.put(node.tri, node);
     }
     
@@ -234,43 +238,60 @@ class FGraph
     }
   }
   
-  void draw()
+  void draw(FNode focus)
   {
+    pg.beginDraw();
+    pg.background(colorBackground);
+    pg.camera(0.0, 500.0, -300.0,
+              0.0, 0.0, 0.0,
+              0.0, 0.0, 1.0);
+    pg.translate(0.0, 0.0, -200.0);
+    pg.rotateZ(rotation);
+    
     Collection nodes = hm.values();
     Iterator iter = nodes.iterator();
     while (iter.hasNext())
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
-      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
+      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
       color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
+      node.z = (1-goodness) * 600;
       
       for (int i = 0; i < node.neighborNodes.size(); i++)
       {
         FNode nn = (FNode)node.neighborNodes.get(i);
-        float nnGoodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
-        color nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0); 
-
-        beginShape(LINES);
-        stroke(nodeValue);
-        vertex(node.x, node.y);
-        stroke(nnValue);
-        vertex(nn.x, nn.y);
-        endShape();
+        float nnGoodness = (float)(nn.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(nn.tri.interiorEdgeCount - minDelaunayEdges);
+        color nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0);
+        nn.z = (1-nnGoodness) * 600;
         
-//        stroke(colorLine, 100);
-//        line(node.x, node.y, nn.x, nn.y);
+        pg.beginShape(LINES);
+        if (node == focus || nn == focus)
+        { pg.stroke(0, 0, 255); }
+        else { pg.stroke(nodeValue); }
+        pg.vertex(node.x, node.y, node.z);
+        pg.stroke(nnValue);
+        pg.vertex(nn.x, nn.y, nn.z);
+        pg.endShape();
       }
     }
     iter = nodes.iterator();
     while (iter.hasNext())
     {
       FNode node = (FNode)iter.next();
-      float goodness = (float)node.tri.countDelaunayEdges() / (float)node.tri.countInteriorEdges();
-      color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
-      fill(nodeValue);
-      stroke(nodeValue);
-      ellipse(node.x, node.y, 10, 10);
+      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
+      color nodeValue = color(255*(1-goodness), 255*goodness, 0);
+      float S = 5.0;
+      if (node == focus)
+      { pg.fill(0, 0, 255); pg.stroke(0, 0, 255); S = 10.0; }
+      else 
+      { pg.fill(nodeValue); pg.stroke(nodeValue); }
+      pg.pushMatrix();
+      pg.translate(node.x, node.y, node.z);
+      pg.box(S);
+      pg.popMatrix();
     }
+    pg.endDraw();
+    image(pg, 0, 0);
   }
 }
