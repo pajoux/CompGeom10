@@ -196,8 +196,8 @@ class FGraph
     for (int i = 0; i < loopNodes.size(); i++)
     {
       FNode node = (FNode)loopNodes.get(i);
-      node.x = cos(pid * i) * 300 + width / 2.0;
-      node.y = sin(pid * i) * 300 + height / 2.0;
+      node.x = cos(pid * i) * width / 3.0 + width / 2.0;
+      node.y = sin(pid * i) * height / 3.0 + height / 2.0;
       fixed.put(node.tri, node);
     }
     
@@ -214,14 +214,21 @@ class FGraph
         if (!fixed.containsKey(node.tri))
         {
           float x = 0, y = 0;
+          int hullCount = 0;
           for (int j = 0; j < node.neighborNodes.size(); j++)
           {
             FNode nei = (FNode)node.neighborNodes.get(j);
+            if (fixed.containsKey(nei))
+            {
+              x += nei.x * 5.0;
+              y += nei.y * 5.0;
+              hullCount += 6;
+            }
             x += nei.x;
             y += nei.y;
           }
-          node.x = x / node.neighborNodes.size();
-          node.y = y / node.neighborNodes.size();
+          node.x = x / (node.neighborNodes.size() + hullCount);
+          node.y = y / (node.neighborNodes.size() + hullCount);
         }
       }
     }

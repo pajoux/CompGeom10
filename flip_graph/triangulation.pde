@@ -612,33 +612,63 @@ class Triangulation
   }
   
   // Draw the graph.
-  void drawGraph()
+  void drawGraph(float lx, float ly, float ux, float uy)
   {
-    // Draw all triangles.
-/*    for (int i = 0; i < triCount; i++)
-    {
-      stroke(color(255, 0, 0));
-      drawEdge(te1[i]);
-      drawEdge(te2[i]);
-      drawEdge(te3[i]);
-    }
-*/
+    float minx = 0.0;
+    float miny = 0.0;
+    float maxx = width;
+    float maxy = height;
+    float w = maxx - minx;
+    float h = maxy - miny;
+    float ox = (minx + maxx) / 2.0;
+    float oy = (miny + maxy) / 2.0;
+    
+    // Compute the difference in size.
+    float sx = (ux - lx) / w;
+    float sy = (uy - ly) / h;
+    float X = (ux + lx) / 2.0;
+    float Y = (uy + ly) / 2.0;
+    
     // Draw all the edges.
     for (int i = 0; i < edgeCount; i++)
     {
+      // Skip infinite edges.
+      if (ev1[i] == -1 || ev2[i] == -1) continue;
+      
+      // Get the coordinates.
+      float x1 = vx[ev1[i]];
+      float y1 = vy[ev1[i]];
+      float x2 = vx[ev2[i]];
+      float y2 = vy[ev2[i]];
+      
+      // Scale correctly.
+      x1 = (x1 - ox) * sx + X;
+      y1 = (y1 - oy) * sy + Y;
+      x2 = (x2 - ox) * sx + X;
+      y2 = (y2 - oy) * sy + Y;
+     
+      // Draw.
       stroke(colorLine);
-      drawEdge(i);
+      line (x1, y1, x2, y2);
     }
     
     // Draw all the nodes.
     for (int i = 0; i < vertexCount; i++)
     {
+      // Get the coordinates.
+      float x = vx[i];
+      float y = vy[i];
+      
+      // Scale correctly.
+      x = (x - ox) * sx + X;
+      y = (y - oy) * sy + Y;
+      
+      // Draw.
       fill(colorNode);
       stroke(colorNode);
-      text(i, vx[i]+5, vy[i]+5);
-      ellipse(vx[i], vy[i], 10, 10);
+      //text(i, x+5, y+5);
+      ellipse(x, y, 10*sx, 10*sy);
     }
-    
   }
   
   void drawEdge (int edge)
