@@ -10,6 +10,9 @@ class FNode
   // Embedding data.
   float x, y, z;
   
+  // Displacement data (for embedifying)
+  float disp_x, disp_y, disp_z;
+  
   // Backtrack
   FNode backNode;
   
@@ -202,6 +205,18 @@ class FGraph
     }
     return null;
   }
+
+  float C ()
+  {
+    float n = (float)hm.size();
+    return sqrt(n / PI);
+  }
+  
+  float cool (int i)
+  {
+    float n = (float)hm.size();
+    return 500 * sqrt(PI / n) / (1 + (PI / n) * pow((float)i, 1.5));
+  }
   
   void embedify()
   {
@@ -219,6 +234,17 @@ class FGraph
       fixed.put(node.tri, node);
     }
     
+    // place all non fixed points at the origin
+    while (iter.hasNext())
+    {
+      FNode node = (FNode)iter.next();
+      if (fixed.containsKey(node.tri))
+        continue;
+      
+      node.x = 0;
+      node.y = 0;      
+    }
+    
     // Now relax the inner points for a while.
     for (int i = 0; i < 200; i++)
     {
@@ -230,21 +256,17 @@ class FGraph
         if (!fixed.containsKey(node.tri))
         {
           float x = 0, y = 0;
-          int hullCount = 0;
           for (int j = 0; j < node.neighborNodes.size(); j++)
           {
             FNode nei = (FNode)node.neighborNodes.get(j);
-            if (fixed.containsKey(nei))
-            {
-              x += nei.x * 5.0;
-              y += nei.y * 5.0;
-              hullCount += 6;
-            }
-            x += nei.x;
-            y += nei.y;
+            x += C() * (nei.x - node.x) * (nei.x - node.x) * (nei.x - node.x);
+            y += C() * (nei.y - node.y) * (nei.y - node.y) * (nei.y - node.y);
           }
-          node.x = x / (node.neighborNodes.size() + hullCount);
-          node.y = y / (node.neighborNodes.size() + hullCount);
+          float n = sqrt(x * x + y * y);
+          if (n == 0)
+            continue;
+          node.x += min(n, cool(i)) * (x / n);
+          node.y += min(n, cool(i)) * (y / n);
         }
       }
     }
