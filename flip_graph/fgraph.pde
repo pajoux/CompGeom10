@@ -4,7 +4,7 @@ class FNode
 {
   FGraph graph;
   boolean marked;
-  float level;
+  float flipsToDelaunay;
   boolean fixed;
   
   // Embedding data.
@@ -20,12 +20,13 @@ class FNode
   Triangulation tri;
   ArrayList neighborNodes;
   
+  // t is the Delaunay triangulation
   FNode(Triangulation t)
   {
     marked = false;
     neighborNodes = new ArrayList();
     tri = t;
-    level = 1.0;
+    flipsToDelaunay = 0.0;
     backNode = null;
     fixed = false;
     z = random(-500, 500);
@@ -42,10 +43,11 @@ class FGraph
   // value modes
   static final int DEL_EDGES_MODE = 0;
   static final int MIN_ANGLE_MODE = 1;
-  static final int NUM_MODES = 2;
+  static final int FLIPS_TO_DEL_MODE = 2;
+  static final int NUM_MODES = 3;
   
   // current value mode
-  int currentMode = DEL_EDGES_MODE;
+  int currentMode = FLIPS_TO_DEL_MODE;
   
   HashMap hm;
   FNode root;
@@ -128,6 +130,8 @@ class FGraph
           float r = (float)(((2 * Math.PI) / ncount) * i);
           nodeFlip.x = random(0, width);
           nodeFlip.y = random(0, height);
+          nodeFlip.flipsToDelaunay = node.flipsToDelaunay + 1;
+
           i += 1;
         }
         
@@ -300,6 +304,8 @@ class FGraph
         return node.tri.delaunayEdgeCount;
       case MIN_ANGLE_MODE:
         return -1 * node.tri.minAngle;  // negate so that the minAngle is the "highest" value
+      case FLIPS_TO_DEL_MODE:
+        return -1 * node.flipsToDelaunay;
       default:
         return 0;
     }
