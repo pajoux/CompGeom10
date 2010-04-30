@@ -307,7 +307,7 @@ class FGraph
       case DEL_EDGES_MODE:
         return node.tri.delaunayEdgeCount;
       case MIN_ANGLE_MODE:
-        return -1 * node.tri.minAngle;  // negate so that the minAngle is the "highest" value
+        return node.tri.minAngle;
       case FLIPS_TO_DEL_MODE:
         return -1 * node.flipsToDelaunay;
       default:

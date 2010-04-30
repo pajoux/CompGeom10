@@ -212,7 +212,7 @@ void draw()
     if (tri.vertexCount >= tri.vertexMax)
     {
       fill(217, 169, 180);
-      text("Max vertex count reached - cannot add more points.", 5, 12);
+      text("Max vertex count reached - cannot add more points.", 2, 12);
     }
     flipButton.update(); flipButton.draw();
   }
