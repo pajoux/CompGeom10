@@ -1,10 +1,10 @@
-import processing.opengl.*;
 
 /// Aesthetics - Color properties, etc.
 color colorBackground = color(61, 61, 61);
 color colorNode = color(219, 171, 206);
 color colorLine = color(171, 206, 219);
 color colorButton = color(206, 219, 171);
+color colorGreen = color(206, 219, 171);
 int widthInit  = 800;
 int heightInit = 600;
 float drawScale = 1.0;
@@ -26,6 +26,13 @@ int flipButtonW = 60;
 int flipButtonH = 30;
 boolean flipButtonHover = false;
 
+/// Reset Button
+int resetButtonX = widthInit - 70;
+int resetButtonY = heightInit - 30;
+int resetButtonW = 60;
+int resetButtonH = 30;
+boolean resetButtonHover = false;
+
 /// Triangulation Properties
 Triangulation tri = new Triangulation(8);
 float triSmallWidth  = widthInit / 5.0;
@@ -43,6 +50,15 @@ int nodeSelected = -1;
 int edge = 3;
 
 // Draw the button.
+void drawResetButton()
+{
+  stroke(colorButton);
+  fill(colorButton);
+  text("Reset", width - 18 - 40, height - 12, 12);
+  if (resetButtonHover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
+  else noFill();
+  rect(resetButtonX, resetButtonY, resetButtonW, resetButtonH);
+}
 void drawFlipButton()
 {
   stroke(colorButton);
@@ -56,6 +72,21 @@ void updateFlipButton()
 {
   flipButtonHover = mouseX >= flipButtonX && mouseX <= flipButtonX + flipButtonW &&
                     mouseY >= flipButtonY && mouseY <= flipButtonY + flipButtonH;
+}
+void updateResetButton()
+{
+  resetButtonHover = mouseX >= resetButtonX && mouseX <= resetButtonX + resetButtonW &&
+                  mouseY >= resetButtonY && mouseY <= resetButtonY + resetButtonH;
+}
+void pressResetButton()
+{
+  mouseMode = MODE_TRI;
+  fgraph = null;
+  tri = new Triangulation(8);
+  animMode = ANIM_NONE;
+  triAnim = 1.0;
+  drawScale = 1.0;
+  resetButtonHover = false;
 }
 void pressFlipButton()
 {
@@ -72,6 +103,11 @@ void mousePressed()
   if (flipButtonHover)
   {
     pressFlipButton();
+    return;
+  }
+  if (resetButtonHover)
+  {
+    pressResetButton();
     return;
   }
   
@@ -118,6 +154,7 @@ void mouseDragged()
     case MODE_FLIP:
     {
       fgraph.rotation += ((mouseX - pmouseX) / 180.0 * PI);
+      fgraph.rotation2 += ((mouseY - pmouseY));
       break;
     }
   }
@@ -166,9 +203,9 @@ void draw()
     triAnim = triAnim * (1.0 - 0.2);
     if (triAnim <= 0.0001) animMode = ANIM_NONE;
   }
-  fill(128, 128, 128, 255 * (1.0 - triAnim));
-  noStroke();
-  rect(0, 0, triSmallWidth, triSmallHeight);
+  noFill();
+  stroke(red(colorGreen), green(colorGreen), blue(colorGreen), 255 * (1.0 - triAnim));
+  rect(-1, -1, triSmallWidth+1, triSmallHeight+1);
   float s = 1.0 - triAnim;
   tri.drawGraph(0, 0, s * triSmallWidth + triAnim * width, s * triSmallHeight + triAnim * height);
   
@@ -197,6 +234,11 @@ void draw()
   {
     updateFlipButton();
     drawFlipButton();
+  }
+  else if (mouseMode == MODE_FLIP)
+  {
+    updateResetButton();
+    drawResetButton();
   }
 }
 
