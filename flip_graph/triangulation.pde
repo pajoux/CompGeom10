@@ -214,10 +214,20 @@ class Triangulation
         updateInfiniteEdges(t, v);
         replaceTrianglePoint(t, -1, v);
       }
-
-      for (int i = 0; i < triCount; i++)
+            
+      // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
+      boolean delaunay = false;
+      while (!delaunay)
       {
-        checkTriangle(i);
+        delaunay = true;
+        for (int e = 0; e < triCount; e++)
+        {
+          if (canFlip(e) && !isEdgeDelaunay(e))
+          {
+            delaunay = false;
+            flip(e);
+          }
+        }
       }
     }
   }
@@ -677,20 +687,28 @@ class Triangulation
     int count = 0;
     for (int e = 0; e < edgeCount; e++)
     {
-      int a = ev1[e];
-      int b = ev2[e];
-      int c = triPointNotOnEdge(et1[e], e);
-      int d = triPointNotOnEdge(et2[e], e);
-      
-      // skip infinite triangles
-      if (a == -1 || b == -1 || c == -1 || d == -1)
-        continue;
-      
-      if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      if (isEdgeDelaunay(e))
         count++;
     }
     
     return count;
+  }
+  
+  boolean isEdgeDelaunay(int e)
+  {
+    int a = ev1[e];
+    int b = ev2[e];
+    int c = triPointNotOnEdge(et1[e], e);
+    int d = triPointNotOnEdge(et2[e], e);
+    
+    // skip infinite triangles
+    if (a == -1 || b == -1 || c == -1 || d == -1)
+      return true;
+    
+    if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      return true;
+    else
+      return false;
   }
   
   // Draw the graph.
