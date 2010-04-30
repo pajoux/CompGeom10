@@ -121,9 +121,13 @@ void mousePressed()
 void keyPressed()
 {
   if (key == ' ')
-  {
     node = null;
-  }
+  else if (key == '1')
+    fgraph.currentMode = FGraph.DEL_EDGES_MODE;
+  else if (key == '2')
+    fgraph.currentMode = FGraph.MIN_ANGLE_MODE;
+  else if (key == '3')
+    fgraph.currentMode = FGraph.FLIPS_TO_DEL_MODE;
 }
 
 void mouseDragged()
@@ -202,14 +206,18 @@ void draw()
   fill(255);
   text("FPS: " + round(frameRate), width - 50, 12);
   
-  // Draw the flip button.
+  resetButton.update(); resetButton.draw();
   if (mouseMode == MODE_TRI)
   {
+    if (tri.vertexCount >= tri.vertexMax)
+    {
+      fill(217, 169, 180);
+      text("Max vertex count reached - cannot add more points.", 2, 12);
+    }
     flipButton.update(); flipButton.draw();
   }
   else if (mouseMode == MODE_FLIP)
   {
-    resetButton.update(); resetButton.draw();
     delButton.update(); delButton.draw(); delButton.selected = (fgraph.currentMode == FGraph.DEL_EDGES_MODE);
     angleButton.update(); angleButton.draw(); angleButton.selected = (fgraph.currentMode == FGraph.MIN_ANGLE_MODE);
     ftodButton.update(); ftodButton.draw(); ftodButton.selected = (fgraph.currentMode == FGraph.FLIPS_TO_DEL_MODE);

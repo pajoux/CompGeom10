@@ -140,9 +140,13 @@ public void mousePressed()
 public void keyPressed()
 {
   if (key == ' ')
-  {
     node = null;
-  }
+  else if (key == '1')
+    fgraph.currentMode = FGraph.DEL_EDGES_MODE;
+  else if (key == '2')
+    fgraph.currentMode = FGraph.MIN_ANGLE_MODE;
+  else if (key == '3')
+    fgraph.currentMode = FGraph.FLIPS_TO_DEL_MODE;
 }
 
 public void mouseDragged()
@@ -221,14 +225,18 @@ public void draw()
   fill(255);
   text("FPS: " + round(frameRate), width - 50, 12);
   
-  // Draw the flip button.
+  resetButton.update(); resetButton.draw();
   if (mouseMode == MODE_TRI)
   {
+    if (tri.vertexCount >= tri.vertexMax)
+    {
+      fill(217, 169, 180);
+      text("Max vertex count reached - cannot add more points.", 2, 12);
+    }
     flipButton.update(); flipButton.draw();
   }
   else if (mouseMode == MODE_FLIP)
   {
-    resetButton.update(); resetButton.draw();
     delButton.update(); delButton.draw(); delButton.selected = (fgraph.currentMode == FGraph.DEL_EDGES_MODE);
     angleButton.update(); angleButton.draw(); angleButton.selected = (fgraph.currentMode == FGraph.MIN_ANGLE_MODE);
     ftodButton.update(); ftodButton.draw(); ftodButton.selected = (fgraph.currentMode == FGraph.FLIPS_TO_DEL_MODE);
@@ -589,7 +597,7 @@ class FGraph
       case DEL_EDGES_MODE:
         return node.tri.delaunayEdgeCount;
       case MIN_ANGLE_MODE:
-        return -1 * node.tri.minAngle;  // negate so that the minAngle is the "highest" value
+        return node.tri.minAngle;
       case FLIPS_TO_DEL_MODE:
         return -1 * node.flipsToDelaunay;
       default:
@@ -837,6 +845,21 @@ class Triangulation
       addPointInTriangulation(v);
     }
     
+    // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
+    boolean delaunay = false;
+    while (!delaunay)
+    {
+      delaunay = true;
+      for (int e = 0; e < triCount; e++)
+      {
+        if (canFlip(e) && !isEdgeDelaunay(e))
+        {
+          delaunay = false;
+          flip(e);
+        }
+      }
+    }
+    
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
@@ -953,21 +976,6 @@ class Triangulation
 
         updateInfiniteEdges(t, v);
         replaceTrianglePoint(t, -1, v);
-      }
-            
-      // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
-      boolean delaunay = false;
-      while (!delaunay)
-      {
-        delaunay = true;
-        for (int e = 0; e < triCount; e++)
-        {
-          if (canFlip(e) && !isEdgeDelaunay(e))
-          {
-            delaunay = false;
-            flip(e);
-          }
-        }
       }
     }
   }
@@ -1177,13 +1185,12 @@ class Triangulation
     
     int v1 = ev1[edge];
     int v2 = ev2[edge];
-    
-    if (v1 == -1 || v2 == -1)
-      return false;
-    
     int v3 = triPointNotOnEdge(t1, edge);
     int v4 = triPointNotOnEdge(t2, edge);
         
+    if (v1 == -1 || v2 == -1 || v3 == -1 || v4 == -1)
+      return false;
+      
     return !inTriangle(v1, v2, v3, v4) && !inTriangle(v2, v1, v3, v4) &&
            !inTriangle(v3, v1, v2, v4) && !inTriangle(v4, v1, v2, v3);
   }
