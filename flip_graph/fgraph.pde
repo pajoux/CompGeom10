@@ -40,6 +40,7 @@ class FGraph
   FNode root;
   ArrayList loopNodes;
   float rotation = 0.0;
+  float rotation2 = 0.0;
   int minDelaunayEdges;
     
   // Build a flip graph from a given triangulation.
@@ -129,6 +130,19 @@ class FGraph
     }
     println("There are " + hm.size() + " nodes in the flip graph!");
     
+    // If the follow node is null, just use all the nodes and fix them.
+    if (loopNodeA == null)
+    {
+      loopNodes = new ArrayList();
+      Collection nodes = hm.values();
+      Iterator iter = nodes.iterator();
+      while (iter.hasNext())
+      {
+        loopNodes.add(iter.next());
+      }
+      return;
+    }
+    
     // Get the loop.
     HashSet loopSet = new HashSet();
     FNode follow = loopNodeA;
@@ -205,8 +219,6 @@ class FGraph
       fixed.put(node.tri, node);
     }
     
-    println("tired");
-    
     // Now relax the inner points for a while.
     for (int i = 0; i < 200; i++)
     {
@@ -242,7 +254,7 @@ class FGraph
   {
     pg.beginDraw();
     pg.background(colorBackground);
-    pg.camera(0.0, 500.0, -300.0,
+    pg.camera(0.0, 500.0, -300.0/* + rotation2*/,
               0.0, 0.0, 0.0,
               0.0, 0.0, 1.0);
     pg.translate(0.0, 0.0, -200.0);
@@ -267,10 +279,12 @@ class FGraph
         
         pg.beginShape(LINES);
         if (node == focus || nn == focus)
-        { pg.stroke(0, 0, 255); }
+        { pg.stroke(colorLine); }
         else { pg.stroke(nodeValue); }
         pg.vertex(node.x, node.y, node.z);
-        pg.stroke(nnValue);
+        if (node == focus || nn == focus)
+        { pg.stroke(colorLine); }
+        else { pg.stroke(nnValue); }
         pg.vertex(nn.x, nn.y, nn.z);
         pg.endShape();
       }
@@ -283,7 +297,7 @@ class FGraph
       color nodeValue = color(255*(1-goodness), 255*goodness, 0);
       float S = 5.0;
       if (node == focus)
-      { pg.fill(0, 0, 255); pg.stroke(0, 0, 255); S = 10.0; }
+      { pg.fill(colorLine); pg.stroke(colorLine); S = 10.0; }
       else 
       { pg.fill(nodeValue); pg.stroke(nodeValue); }
       pg.pushMatrix();
