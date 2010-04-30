@@ -209,6 +209,11 @@ void draw()
   resetButton.update(); resetButton.draw();
   if (mouseMode == MODE_TRI)
   {
+    if (tri.vertexCount >= tri.vertexMax)
+    {
+      fill(217, 169, 180);
+      text("Max vertex count reached - cannot add more points.", 5, 12);
+    }
     flipButton.update(); flipButton.draw();
   }
   else if (mouseMode == MODE_FLIP)
