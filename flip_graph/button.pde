@@ -7,6 +7,7 @@ class Button
   int h = 30;
   String txt = "Default";
   boolean hover = false; 
+  boolean selected = false;
   
   Button(int x, int y, int w, int h, String txt)
   {
@@ -24,6 +25,9 @@ class Button
     float tw = textWidth(txt);
     text(txt, x + w / 2.0 - tw / 2.0, y + h - 12);
     if (hover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
+    else if (selected) {
+      fill(red(colorButton), green(colorButton), blue(colorButton), 50);
+    }
     else noFill();
     rect(x, y, w, h);
   }

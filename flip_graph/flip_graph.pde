@@ -87,6 +87,7 @@ void mousePressed()
   }
   else if (ftodButton.pressed())
   {
+    fgraph.currentMode = FGraph.FLIPS_TO_DEL_MODE;
     return;
   }
   
@@ -209,9 +210,9 @@ void draw()
   else if (mouseMode == MODE_FLIP)
   {
     resetButton.update(); resetButton.draw();
-    delButton.update(); delButton.draw();
-    angleButton.update(); angleButton.draw();
-    ftodButton.update(); ftodButton.draw();
+    delButton.update(); delButton.draw(); delButton.selected = (fgraph.currentMode == FGraph.DEL_EDGES_MODE);
+    angleButton.update(); angleButton.draw(); angleButton.selected = (fgraph.currentMode == FGraph.MIN_ANGLE_MODE);
+    ftodButton.update(); ftodButton.draw(); ftodButton.selected = (fgraph.currentMode == FGraph.FLIPS_TO_DEL_MODE);
   }
 }
 
