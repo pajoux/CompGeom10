@@ -97,6 +97,21 @@ class Triangulation
       addPointInTriangulation(v);
     }
     
+    // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
+    boolean delaunay = false;
+    while (!delaunay)
+    {
+      delaunay = true;
+      for (int e = 0; e < triCount; e++)
+      {
+        if (canFlip(e) && !isEdgeDelaunay(e))
+        {
+          delaunay = false;
+          flip(e);
+        }
+      }
+    }
+    
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
@@ -213,21 +228,6 @@ class Triangulation
 
         updateInfiniteEdges(t, v);
         replaceTrianglePoint(t, -1, v);
-      }
-            
-      // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
-      boolean delaunay = false;
-      while (!delaunay)
-      {
-        delaunay = true;
-        for (int e = 0; e < triCount; e++)
-        {
-          if (canFlip(e) && !isEdgeDelaunay(e))
-          {
-            delaunay = false;
-            flip(e);
-          }
-        }
       }
     }
   }
@@ -437,13 +437,12 @@ class Triangulation
     
     int v1 = ev1[edge];
     int v2 = ev2[edge];
-    
-    if (v1 == -1 || v2 == -1)
-      return false;
-    
     int v3 = triPointNotOnEdge(t1, edge);
     int v4 = triPointNotOnEdge(t2, edge);
         
+    if (v1 == -1 || v2 == -1 || v3 == -1 || v4 == -1)
+      return false;
+      
     return !inTriangle(v1, v2, v3, v4) && !inTriangle(v2, v1, v3, v4) &&
            !inTriangle(v3, v1, v2, v4) && !inTriangle(v4, v1, v2, v3);
   }
