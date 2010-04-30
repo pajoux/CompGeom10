@@ -5,6 +5,7 @@ class Triangulation
   // Some triangulation properties.
   int delaunayEdgeCount = -1;
   int interiorEdgeCount = -1;
+  float minAngle = -1;
   
   // Vertices.
   int vertexMax, vertexCount;
@@ -99,6 +100,7 @@ class Triangulation
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
+    minAngle = minAngle();
   }
   
   void addPointInTriangulation(int v)
@@ -212,10 +214,20 @@ class Triangulation
         updateInfiniteEdges(t, v);
         replaceTrianglePoint(t, -1, v);
       }
-
-      for (int i = 0; i < triCount; i++)
+            
+      // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
+      boolean delaunay = false;
+      while (!delaunay)
       {
-        checkTriangle(i);
+        delaunay = true;
+        for (int e = 0; e < triCount; e++)
+        {
+          if (canFlip(e) && !isEdgeDelaunay(e))
+          {
+            delaunay = false;
+            flip(e);
+          }
+        }
       }
     }
   }
@@ -544,6 +556,7 @@ class Triangulation
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
+    minAngle = minAngle();
   }
   
   // switches the triangle entry for an edge from t1 to t2
@@ -622,6 +635,34 @@ class Triangulation
       return -1;
   }
   
+  float minAngle()
+  {
+    float minAngle = 180;
+    for (int t = 0; t < triCount; t++)
+    {
+      // ignore infinite triangles
+      if (tv1[t] == -1 || tv2[t] == -1 || tv3[t] == -1)
+        continue;
+        
+      // calculate all 3 angles for this triangle
+      int[] p = new int[5];
+      p[0] = tv1[t];
+      p[1] = tv2[t];
+      p[2] = tv3[t];
+      p[3] = tv1[t];
+      p[4] = tv2[t];
+      for (int i = 0; i < p.length - 2; i++)
+      {
+        PVector v1 = new PVector(vx[p[i+1]] - vx[p[i]], vy[p[i+1]] - vy[p[i]]);
+        PVector v2 = new PVector(vx[p[i+2]] - vx[p[i]], vy[p[i+2]] - vy[p[i]]);
+        
+        float angle = degrees(PVector.angleBetween(v1, v2));
+        minAngle = min(angle, minAngle);
+      }
+    }
+    return minAngle;
+  }
+  
   int countInteriorEdges()
   {
     int count = 0;
@@ -646,20 +687,28 @@ class Triangulation
     int count = 0;
     for (int e = 0; e < edgeCount; e++)
     {
-      int a = ev1[e];
-      int b = ev2[e];
-      int c = triPointNotOnEdge(et1[e], e);
-      int d = triPointNotOnEdge(et2[e], e);
-      
-      // skip infinite triangles
-      if (a == -1 || b == -1 || c == -1 || d == -1)
-        continue;
-      
-      if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      if (isEdgeDelaunay(e))
         count++;
     }
     
     return count;
+  }
+  
+  boolean isEdgeDelaunay(int e)
+  {
+    int a = ev1[e];
+    int b = ev2[e];
+    int c = triPointNotOnEdge(et1[e], e);
+    int d = triPointNotOnEdge(et2[e], e);
+    
+    // skip infinite triangles
+    if (a == -1 || b == -1 || c == -1 || d == -1)
+      return true;
+    
+    if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      return true;
+    else
+      return false;
   }
   
   // Draw the graph.

@@ -4,11 +4,14 @@ class FNode
 {
   FGraph graph;
   boolean marked;
-  float level;
+  float flipsToDelaunay;
   boolean fixed;
   
   // Embedding data.
   float x, y, z;
+  
+  // Displacement data (for embedifying)
+  float disp_x, disp_y, disp_z;
   
   // Backtrack
   FNode backNode;
@@ -17,12 +20,13 @@ class FNode
   Triangulation tri;
   ArrayList neighborNodes;
   
+  // t is the Delaunay triangulation
   FNode(Triangulation t)
   {
     marked = false;
     neighborNodes = new ArrayList();
     tri = t;
-    level = 1.0;
+    flipsToDelaunay = 0.0;
     backNode = null;
     fixed = false;
     z = random(-500, 500);
@@ -36,19 +40,38 @@ class FNode
 
 class FGraph
 {
+  // animation stuff.
+  float tz, tzoom;
+  float cz = 0.0, czoom = 500.0;
+  
+  // value modes
+  static final int DEL_EDGES_MODE = 0;
+  static final int MIN_ANGLE_MODE = 1;
+  static final int FLIPS_TO_DEL_MODE = 2;
+  static final int NUM_MODES = 3;
+  
+  // current value mode
+  int currentMode = FLIPS_TO_DEL_MODE;
+  
   HashMap hm;
   FNode root;
   ArrayList loopNodes;
   float rotation = 0.0;
   float rotation2 = 0.0;
-  int minDelaunayEdges;
-    
+  float[] bestValue = new float[NUM_MODES];
+  float[] worstValue = new float[NUM_MODES];
+  
   // Build a flip graph from a given triangulation.
   FGraph(Triangulation t)
   {
-    minDelaunayEdges = t.interiorEdgeCount;
+    // initialize max/min values
+    for (int mode = 0; mode < NUM_MODES; mode++)
+    {
+      bestValue[mode] = -1 * MAX_FLOAT;
+      worstValue[mode] = MAX_FLOAT;
+    }
+    
     bfs(t);
-    //embedify();
   }
   
   void bfs(Triangulation t)
@@ -71,8 +94,14 @@ class FGraph
       // Get the next triangulation to work with.
       FNode node = (FNode)queue.removeFirst();
       Triangulation tri = node.tri;
-      minDelaunayEdges = min(node.tri.delaunayEdgeCount, minDelaunayEdges);
-
+      
+      // update best/worst values
+      for (int mode = 0; mode < NUM_MODES; mode++)
+      {
+        float value = value(node, mode);
+        bestValue[mode] = max(value, bestValue[mode]);
+        worstValue[mode] = min(value, worstValue[mode]);
+      }
       // Mark the node.
       node.marked = true;
 
@@ -105,6 +134,8 @@ class FGraph
           float r = (float)(((2 * Math.PI) / ncount) * i);
           nodeFlip.x = random(0, width);
           nodeFlip.y = random(0, height);
+          nodeFlip.flipsToDelaunay = node.flipsToDelaunay + 1;
+
           i += 1;
         }
         
@@ -129,7 +160,7 @@ class FGraph
       }
     }
     println("There are " + hm.size() + " nodes in the flip graph!");
-    
+
     // If the follow node is null, just use all the nodes and fix them.
     if (loopNodeA == null)
     {
@@ -202,6 +233,18 @@ class FGraph
     }
     return null;
   }
+
+  float C ()
+  {
+    float n = (float)hm.size();
+    return sqrt(n / PI);
+  }
+  
+  float cool (int i)
+  {
+    float n = (float)hm.size();
+    return 500 * sqrt(PI / n) / (1 + (PI / n) * pow((float)i, 1.5));
+  }
   
   void embedify()
   {
@@ -219,6 +262,17 @@ class FGraph
       fixed.put(node.tri, node);
     }
     
+    // place all non fixed points at the origin
+    while (iter.hasNext())
+    {
+      FNode node = (FNode)iter.next();
+      if (fixed.containsKey(node.tri))
+        continue;
+      
+      node.x = 0;
+      node.y = 0;      
+    }
+    
     // Now relax the inner points for a while.
     for (int i = 0; i < 200; i++)
     {
@@ -230,33 +284,60 @@ class FGraph
         if (!fixed.containsKey(node.tri))
         {
           float x = 0, y = 0;
-          int hullCount = 0;
           for (int j = 0; j < node.neighborNodes.size(); j++)
           {
             FNode nei = (FNode)node.neighborNodes.get(j);
-            if (fixed.containsKey(nei))
-            {
-              x += nei.x * 5.0;
-              y += nei.y * 5.0;
-              hullCount += 6;
-            }
-            x += nei.x;
-            y += nei.y;
+            x += C() * (nei.x - node.x) * (nei.x - node.x) * (nei.x - node.x);
+            y += C() * (nei.y - node.y) * (nei.y - node.y) * (nei.y - node.y);
           }
-          node.x = x / (node.neighborNodes.size() + hullCount);
-          node.y = y / (node.neighborNodes.size() + hullCount);
+          float n = sqrt(x * x + y * y);
+          if (n == 0)
+            continue;
+          node.x += min(n, cool(i)) * (x / n);
+          node.y += min(n, cool(i)) * (y / n);
         }
       }
     }
+  }
+  
+  float value(FNode node, int mode)
+  {
+    switch (mode)
+    {
+      case DEL_EDGES_MODE:
+        return node.tri.delaunayEdgeCount;
+      case MIN_ANGLE_MODE:
+        return -1 * node.tri.minAngle;  // negate so that the minAngle is the "highest" value
+      case FLIPS_TO_DEL_MODE:
+        return -1 * node.flipsToDelaunay;
+      default:
+        return 0;
+    }
+  }
+  
+  float goodness(FNode node)
+  {
+    return (float)(value(node, currentMode) - worstValue[currentMode]) / (float)(bestValue[currentMode] - worstValue[currentMode]);
   }
   
   void draw(FNode focus)
   {
     pg.beginDraw();
     pg.background(colorBackground);
-    pg.camera(0.0, 500.0, -300.0/* + rotation2*/,
-              0.0, 0.0, 0.0,
-              0.0, 0.0, 1.0);
+    if (focus == null)
+    {
+      tz = 0.0; tzoom = 500.0;
+    }
+    else
+    {
+      tz = focus.z - 200.0; tzoom = focus.y + 500.0;
+    }
+    cz = cz + (tz - cz) * 0.05;
+    czoom = czoom + (tzoom - czoom) * 0.05;
+    pg.camera(0.0, czoom, cz - 300.0/* + rotation2*/,
+//                -(mouseX - width / 2.0) * 0.5, (mouseY - height / 2.0)*1.2, cz,
+                0.0, 0.0, cz,
+                0.0, 0.0, 1.0);
     pg.translate(0.0, 0.0, -200.0);
     pg.rotateZ(rotation);
     
@@ -266,14 +347,15 @@ class FGraph
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
-      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
+      float goodness = goodness(node);
+      
       color nodeValue = color(255*(1-goodness), 255*goodness, 0); 
       node.z = (1-goodness) * 600;
       
       for (int i = 0; i < node.neighborNodes.size(); i++)
       {
         FNode nn = (FNode)node.neighborNodes.get(i);
-        float nnGoodness = (float)(nn.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(nn.tri.interiorEdgeCount - minDelaunayEdges);
+        float nnGoodness = goodness(nn);
         color nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0);
         nn.z = (1-nnGoodness) * 600;
         
@@ -293,7 +375,7 @@ class FGraph
     while (iter.hasNext())
     {
       FNode node = (FNode)iter.next();
-      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
+      float goodness = goodness(node);
       color nodeValue = color(255*(1-goodness), 255*goodness, 0);
       float S = 5.0;
       if (node == focus)

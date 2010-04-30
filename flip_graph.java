@@ -38,19 +38,12 @@ final int ANIM_TRI_SHRINK = 1;
 final int ANIM_NONE = 0;
 int animMode = ANIM_NONE;
 
-/// Flip Button - Properties for the "flip" button.
-int flipButtonX = 5;
-int flipButtonY = heightInit - 30;
-int flipButtonW = 60;
-int flipButtonH = 30;
-boolean flipButtonHover = false;
-
-/// Reset Button
-int resetButtonX = widthInit - 70;
-int resetButtonY = heightInit - 30;
-int resetButtonW = 60;
-int resetButtonH = 30;
-boolean resetButtonHover = false;
+/// Buttons - All the buttons.
+Button delButton   = new Button(5, heightInit - 30, 120, 30, "Delaunay Edges");
+Button angleButton = new Button(5 + 120 + 5, heightInit - 30, 120, 30, "Minimum Angle");
+Button ftodButton  = new Button(5 + 240 + 10, heightInit - 30, 120, 30, "Flips to Delaunay");
+Button flipButton  = new Button(5, heightInit - 30, 160, 30, "Generate Flip Graph");
+Button resetButton = new Button(widthInit - 70, heightInit - 30, 60, 30, "Reset");
 
 /// Triangulation Properties
 Triangulation tri = new Triangulation(8);
@@ -69,34 +62,6 @@ int nodeSelected = -1;
 int edge = 3;
 
 // Draw the button.
-public void drawResetButton()
-{
-  stroke(colorButton);
-  fill(colorButton);
-  text("Reset", width - 18 - 40, height - 12, 12);
-  if (resetButtonHover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
-  else noFill();
-  rect(resetButtonX, resetButtonY, resetButtonW, resetButtonH);
-}
-public void drawFlipButton()
-{
-  stroke(colorButton);
-  fill(colorButton);
-  text("Flip It", 18, height - 12, 12);
-  if (flipButtonHover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
-  else noFill();
-  rect(flipButtonX, flipButtonY, flipButtonW, flipButtonH);
-}
-public void updateFlipButton()
-{
-  flipButtonHover = mouseX >= flipButtonX && mouseX <= flipButtonX + flipButtonW &&
-                    mouseY >= flipButtonY && mouseY <= flipButtonY + flipButtonH;
-}
-public void updateResetButton()
-{
-  resetButtonHover = mouseX >= resetButtonX && mouseX <= resetButtonX + resetButtonW &&
-                  mouseY >= resetButtonY && mouseY <= resetButtonY + resetButtonH;
-}
 public void pressResetButton()
 {
   mouseMode = MODE_TRI;
@@ -105,7 +70,7 @@ public void pressResetButton()
   animMode = ANIM_NONE;
   triAnim = 1.0f;
   drawScale = 1.0f;
-  resetButtonHover = false;
+  resetButton.hover = false;
 }
 public void pressFlipButton()
 {
@@ -113,20 +78,35 @@ public void pressFlipButton()
   mouseMode = MODE_FLIP;
   fgraph = new FGraph(tri);
   fgraph.embedify();
-  flipButtonHover = false;
+  flipButton.hover = false;
 }
 
 public void mousePressed()
 {
   // If the mouse if over the button, handle the button press.
-  if (flipButtonHover)
+  if (flipButton.pressed())
   {
     pressFlipButton();
     return;
   }
-  if (resetButtonHover)
+  else if (resetButton.pressed())
   {
     pressResetButton();
+    return;
+  }
+  else if (delButton.pressed())
+  {
+    fgraph.currentMode = FGraph.DEL_EDGES_MODE;
+    return;
+  }
+  else if (angleButton.pressed())
+  {
+    fgraph.currentMode = FGraph.MIN_ANGLE_MODE;
+    return;
+  }
+  else if (ftodButton.pressed())
+  {
+    fgraph.currentMode = FGraph.FLIPS_TO_DEL_MODE;
     return;
   }
   
@@ -155,6 +135,14 @@ public void mousePressed()
     }
   }
   return;
+}
+
+public void keyPressed()
+{
+  if (key == ' ')
+  {
+    node = null;
+  }
 }
 
 public void mouseDragged()
@@ -203,7 +191,8 @@ public void draw()
   if (mouseMode == MODE_FLIP)
   {
     // Draw it.
-    node = fgraph.closestNode(mouseX, mouseY, 10);
+    if (!mousePressed)
+    { FNode temp = fgraph.closestNode(mouseX, mouseY, 10); if (temp != null) node = temp; }
     fgraph.draw(node);
     
     // Draw a "fade" in.
@@ -228,22 +217,6 @@ public void draw()
   float s = 1.0f - triAnim;
   tri.drawGraph(0, 0, s * triSmallWidth + triAnim * width, s * triSmallHeight + triAnim * height);
   
-//  // Draw the neighbors for the flip graph.
-//  if (node != null)
-//  {
-//    int count = node.neighborNodes.size();
-//    for (int i = 0; i < count; i++)
-//    {
-//      FNode nn = (FNode)node.neighborNodes.get(i);
-//      stroke(100, 20, 20);
-//      line(node.x, node.y, nn.x, nn.y);
-//    }
-//    
-//    fill(255, 0, 0);
-//    stroke(255, 0, 0);
-//    ellipse(node.x, node.y, 10, 10);
-//  }
-//  
   // Add an FPS counter.
   fill(255);
   text("FPS: " + round(frameRate), width - 50, 12);
@@ -251,27 +224,76 @@ public void draw()
   // Draw the flip button.
   if (mouseMode == MODE_TRI)
   {
-    updateFlipButton();
-    drawFlipButton();
+    flipButton.update(); flipButton.draw();
   }
   else if (mouseMode == MODE_FLIP)
   {
-    updateResetButton();
-    drawResetButton();
+    resetButton.update(); resetButton.draw();
+    delButton.update(); delButton.draw(); delButton.selected = (fgraph.currentMode == FGraph.DEL_EDGES_MODE);
+    angleButton.update(); angleButton.draw(); angleButton.selected = (fgraph.currentMode == FGraph.MIN_ANGLE_MODE);
+    ftodButton.update(); ftodButton.draw(); ftodButton.selected = (fgraph.currentMode == FGraph.FLIPS_TO_DEL_MODE);
   }
 }
 
+
+class Button
+{
+  int x = widthInit - 70;
+  int y = heightInit - 30;
+  int w = 60;
+  int h = 30;
+  String txt = "Default";
+  boolean hover = false; 
+  boolean selected = false;
+  
+  Button(int x, int y, int w, int h, String txt)
+  {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.txt = txt;
+  }
+   
+  public void draw()
+  {
+    stroke(colorButton);
+    fill(colorButton);
+    float tw = textWidth(txt);
+    text(txt, x + w / 2.0f - tw / 2.0f, y + h - 12);
+    if (hover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
+    else if (selected) {
+      fill(red(colorButton), green(colorButton), blue(colorButton), 50);
+    }
+    else noFill();
+    rect(x, y, w, h);
+  }
+ 
+  public void update()
+  {  
+    hover = mouseX >= x && mouseX <= x + w &&
+            mouseY >= y && mouseY <= y + h;
+  }
+ 
+  public boolean pressed()
+  {
+    return hover;
+  }
+}
 
 
 class FNode
 {
   FGraph graph;
   boolean marked;
-  float level;
+  float flipsToDelaunay;
   boolean fixed;
   
   // Embedding data.
   float x, y, z;
+  
+  // Displacement data (for embedifying)
+  float disp_x, disp_y, disp_z;
   
   // Backtrack
   FNode backNode;
@@ -280,12 +302,13 @@ class FNode
   Triangulation tri;
   ArrayList neighborNodes;
   
+  // t is the Delaunay triangulation
   FNode(Triangulation t)
   {
     marked = false;
     neighborNodes = new ArrayList();
     tri = t;
-    level = 1.0f;
+    flipsToDelaunay = 0.0f;
     backNode = null;
     fixed = false;
     z = random(-500, 500);
@@ -299,19 +322,38 @@ class FNode
 
 class FGraph
 {
+  // animation stuff.
+  float tz, tzoom;
+  float cz = 0.0f, czoom = 500.0f;
+  
+  // value modes
+  static final int DEL_EDGES_MODE = 0;
+  static final int MIN_ANGLE_MODE = 1;
+  static final int FLIPS_TO_DEL_MODE = 2;
+  static final int NUM_MODES = 3;
+  
+  // current value mode
+  int currentMode = FLIPS_TO_DEL_MODE;
+  
   HashMap hm;
   FNode root;
   ArrayList loopNodes;
   float rotation = 0.0f;
   float rotation2 = 0.0f;
-  int minDelaunayEdges;
-    
+  float[] bestValue = new float[NUM_MODES];
+  float[] worstValue = new float[NUM_MODES];
+  
   // Build a flip graph from a given triangulation.
   FGraph(Triangulation t)
   {
-    minDelaunayEdges = t.interiorEdgeCount;
+    // initialize max/min values
+    for (int mode = 0; mode < NUM_MODES; mode++)
+    {
+      bestValue[mode] = -1 * MAX_FLOAT;
+      worstValue[mode] = MAX_FLOAT;
+    }
+    
     bfs(t);
-    //embedify();
   }
   
   public void bfs(Triangulation t)
@@ -334,8 +376,14 @@ class FGraph
       // Get the next triangulation to work with.
       FNode node = (FNode)queue.removeFirst();
       Triangulation tri = node.tri;
-      minDelaunayEdges = min(node.tri.delaunayEdgeCount, minDelaunayEdges);
-
+      
+      // update best/worst values
+      for (int mode = 0; mode < NUM_MODES; mode++)
+      {
+        float value = value(node, mode);
+        bestValue[mode] = max(value, bestValue[mode]);
+        worstValue[mode] = min(value, worstValue[mode]);
+      }
       // Mark the node.
       node.marked = true;
 
@@ -368,6 +416,8 @@ class FGraph
           float r = (float)(((2 * Math.PI) / ncount) * i);
           nodeFlip.x = random(0, width);
           nodeFlip.y = random(0, height);
+          nodeFlip.flipsToDelaunay = node.flipsToDelaunay + 1;
+
           i += 1;
         }
         
@@ -392,7 +442,7 @@ class FGraph
       }
     }
     println("There are " + hm.size() + " nodes in the flip graph!");
-    
+
     // If the follow node is null, just use all the nodes and fix them.
     if (loopNodeA == null)
     {
@@ -465,6 +515,18 @@ class FGraph
     }
     return null;
   }
+
+  public float C ()
+  {
+    float n = (float)hm.size();
+    return sqrt(n / PI);
+  }
+  
+  public float cool (int i)
+  {
+    float n = (float)hm.size();
+    return 500 * sqrt(PI / n) / (1 + (PI / n) * pow((float)i, 1.5f));
+  }
   
   public void embedify()
   {
@@ -482,6 +544,17 @@ class FGraph
       fixed.put(node.tri, node);
     }
     
+    // place all non fixed points at the origin
+    while (iter.hasNext())
+    {
+      FNode node = (FNode)iter.next();
+      if (fixed.containsKey(node.tri))
+        continue;
+      
+      node.x = 0;
+      node.y = 0;      
+    }
+    
     // Now relax the inner points for a while.
     for (int i = 0; i < 200; i++)
     {
@@ -493,33 +566,60 @@ class FGraph
         if (!fixed.containsKey(node.tri))
         {
           float x = 0, y = 0;
-          int hullCount = 0;
           for (int j = 0; j < node.neighborNodes.size(); j++)
           {
             FNode nei = (FNode)node.neighborNodes.get(j);
-            if (fixed.containsKey(nei))
-            {
-              x += nei.x * 5.0f;
-              y += nei.y * 5.0f;
-              hullCount += 6;
-            }
-            x += nei.x;
-            y += nei.y;
+            x += C() * (nei.x - node.x) * (nei.x - node.x) * (nei.x - node.x);
+            y += C() * (nei.y - node.y) * (nei.y - node.y) * (nei.y - node.y);
           }
-          node.x = x / (node.neighborNodes.size() + hullCount);
-          node.y = y / (node.neighborNodes.size() + hullCount);
+          float n = sqrt(x * x + y * y);
+          if (n == 0)
+            continue;
+          node.x += min(n, cool(i)) * (x / n);
+          node.y += min(n, cool(i)) * (y / n);
         }
       }
     }
+  }
+  
+  public float value(FNode node, int mode)
+  {
+    switch (mode)
+    {
+      case DEL_EDGES_MODE:
+        return node.tri.delaunayEdgeCount;
+      case MIN_ANGLE_MODE:
+        return -1 * node.tri.minAngle;  // negate so that the minAngle is the "highest" value
+      case FLIPS_TO_DEL_MODE:
+        return -1 * node.flipsToDelaunay;
+      default:
+        return 0;
+    }
+  }
+  
+  public float goodness(FNode node)
+  {
+    return (float)(value(node, currentMode) - worstValue[currentMode]) / (float)(bestValue[currentMode] - worstValue[currentMode]);
   }
   
   public void draw(FNode focus)
   {
     pg.beginDraw();
     pg.background(colorBackground);
-    pg.camera(0.0f, 500.0f, -300.0f/* + rotation2*/,
-              0.0f, 0.0f, 0.0f,
-              0.0f, 0.0f, 1.0f);
+    if (focus == null)
+    {
+      tz = 0.0f; tzoom = 500.0f;
+    }
+    else
+    {
+      tz = focus.z - 200.0f; tzoom = focus.y + 500.0f;
+    }
+    cz = cz + (tz - cz) * 0.05f;
+    czoom = czoom + (tzoom - czoom) * 0.05f;
+    pg.camera(0.0f, czoom, cz - 300.0f/* + rotation2*/,
+//                -(mouseX - width / 2.0) * 0.5, (mouseY - height / 2.0)*1.2, cz,
+                0.0f, 0.0f, cz,
+                0.0f, 0.0f, 1.0f);
     pg.translate(0.0f, 0.0f, -200.0f);
     pg.rotateZ(rotation);
     
@@ -529,14 +629,15 @@ class FGraph
     {
       // Draw all the links.
       FNode node = (FNode)iter.next();
-      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
+      float goodness = goodness(node);
+      
       int nodeValue = color(255*(1-goodness), 255*goodness, 0); 
       node.z = (1-goodness) * 600;
       
       for (int i = 0; i < node.neighborNodes.size(); i++)
       {
         FNode nn = (FNode)node.neighborNodes.get(i);
-        float nnGoodness = (float)(nn.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(nn.tri.interiorEdgeCount - minDelaunayEdges);
+        float nnGoodness = goodness(nn);
         int nnValue = color(255*(1-nnGoodness), 255*nnGoodness, 0);
         nn.z = (1-nnGoodness) * 600;
         
@@ -556,7 +657,7 @@ class FGraph
     while (iter.hasNext())
     {
       FNode node = (FNode)iter.next();
-      float goodness = (float)(node.tri.delaunayEdgeCount - minDelaunayEdges) / (float)(node.tri.interiorEdgeCount - minDelaunayEdges);
+      float goodness = goodness(node);
       int nodeValue = color(255*(1-goodness), 255*goodness, 0);
       float S = 5.0f;
       if (node == focus)
@@ -644,6 +745,7 @@ class Triangulation
   // Some triangulation properties.
   int delaunayEdgeCount = -1;
   int interiorEdgeCount = -1;
+  float minAngle = -1;
   
   // Vertices.
   int vertexMax, vertexCount;
@@ -738,6 +840,7 @@ class Triangulation
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
+    minAngle = minAngle();
   }
   
   public void addPointInTriangulation(int v)
@@ -851,10 +954,20 @@ class Triangulation
         updateInfiniteEdges(t, v);
         replaceTrianglePoint(t, -1, v);
       }
-
-      for (int i = 0; i < triCount; i++)
+            
+      // TODO: brute force - we only need to check adjacent edges and then on every flip add the edges adjacent to that edge
+      boolean delaunay = false;
+      while (!delaunay)
       {
-        checkTriangle(i);
+        delaunay = true;
+        for (int e = 0; e < triCount; e++)
+        {
+          if (canFlip(e) && !isEdgeDelaunay(e))
+          {
+            delaunay = false;
+            flip(e);
+          }
+        }
       }
     }
   }
@@ -1183,6 +1296,7 @@ class Triangulation
     // Update some properties.
     delaunayEdgeCount = countDelaunayEdges();
     interiorEdgeCount = countInteriorEdges();
+    minAngle = minAngle();
   }
   
   // switches the triangle entry for an edge from t1 to t2
@@ -1261,6 +1375,34 @@ class Triangulation
       return -1;
   }
   
+  public float minAngle()
+  {
+    float minAngle = 180;
+    for (int t = 0; t < triCount; t++)
+    {
+      // ignore infinite triangles
+      if (tv1[t] == -1 || tv2[t] == -1 || tv3[t] == -1)
+        continue;
+        
+      // calculate all 3 angles for this triangle
+      int[] p = new int[5];
+      p[0] = tv1[t];
+      p[1] = tv2[t];
+      p[2] = tv3[t];
+      p[3] = tv1[t];
+      p[4] = tv2[t];
+      for (int i = 0; i < p.length - 2; i++)
+      {
+        PVector v1 = new PVector(vx[p[i+1]] - vx[p[i]], vy[p[i+1]] - vy[p[i]]);
+        PVector v2 = new PVector(vx[p[i+2]] - vx[p[i]], vy[p[i+2]] - vy[p[i]]);
+        
+        float angle = degrees(PVector.angleBetween(v1, v2));
+        minAngle = min(angle, minAngle);
+      }
+    }
+    return minAngle;
+  }
+  
   public int countInteriorEdges()
   {
     int count = 0;
@@ -1285,20 +1427,28 @@ class Triangulation
     int count = 0;
     for (int e = 0; e < edgeCount; e++)
     {
-      int a = ev1[e];
-      int b = ev2[e];
-      int c = triPointNotOnEdge(et1[e], e);
-      int d = triPointNotOnEdge(et2[e], e);
-      
-      // skip infinite triangles
-      if (a == -1 || b == -1 || c == -1 || d == -1)
-        continue;
-      
-      if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      if (isEdgeDelaunay(e))
         count++;
     }
     
     return count;
+  }
+  
+  public boolean isEdgeDelaunay(int e)
+  {
+    int a = ev1[e];
+    int b = ev2[e];
+    int c = triPointNotOnEdge(et1[e], e);
+    int d = triPointNotOnEdge(et2[e], e);
+    
+    // skip infinite triangles
+    if (a == -1 || b == -1 || c == -1 || d == -1)
+      return true;
+    
+    if (Geom.inCircle(vx[a], vy[a], vx[c], vy[c], vx[b], vy[b], vx[d], vy[d]) < 0)
+      return true;
+    else
+      return false;
   }
   
   // Draw the graph.
