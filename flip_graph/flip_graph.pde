@@ -19,19 +19,12 @@ final int ANIM_TRI_SHRINK = 1;
 final int ANIM_NONE = 0;
 int animMode = ANIM_NONE;
 
-/// Flip Button - Properties for the "flip" button.
-int flipButtonX = 5;
-int flipButtonY = heightInit - 30;
-int flipButtonW = 60;
-int flipButtonH = 30;
-boolean flipButtonHover = false;
-
-/// Reset Button
-int resetButtonX = widthInit - 70;
-int resetButtonY = heightInit - 30;
-int resetButtonW = 60;
-int resetButtonH = 30;
-boolean resetButtonHover = false;
+/// Buttons - All the buttons.
+Button delButton   = new Button(5, heightInit - 30, 120, 30, "Delaunay Edges");
+Button angleButton = new Button(5 + 120 + 5, heightInit - 30, 120, 30, "Minimum Angle");
+Button ftodButton  = new Button(5 + 240 + 10, heightInit - 30, 120, 30, "Flips to Delaunay");
+Button flipButton  = new Button(5, heightInit - 30, 160, 30, "Generate Flip Graph");
+Button resetButton = new Button(widthInit - 70, heightInit - 30, 60, 30, "Reset");
 
 /// Triangulation Properties
 Triangulation tri = new Triangulation(8);
@@ -50,34 +43,6 @@ int nodeSelected = -1;
 int edge = 3;
 
 // Draw the button.
-void drawResetButton()
-{
-  stroke(colorButton);
-  fill(colorButton);
-  text("Reset", width - 18 - 40, height - 12, 12);
-  if (resetButtonHover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
-  else noFill();
-  rect(resetButtonX, resetButtonY, resetButtonW, resetButtonH);
-}
-void drawFlipButton()
-{
-  stroke(colorButton);
-  fill(colorButton);
-  text("Flip It", 18, height - 12, 12);
-  if (flipButtonHover) fill(red(colorButton), green(colorButton), blue(colorButton), 100);
-  else noFill();
-  rect(flipButtonX, flipButtonY, flipButtonW, flipButtonH);
-}
-void updateFlipButton()
-{
-  flipButtonHover = mouseX >= flipButtonX && mouseX <= flipButtonX + flipButtonW &&
-                    mouseY >= flipButtonY && mouseY <= flipButtonY + flipButtonH;
-}
-void updateResetButton()
-{
-  resetButtonHover = mouseX >= resetButtonX && mouseX <= resetButtonX + resetButtonW &&
-                  mouseY >= resetButtonY && mouseY <= resetButtonY + resetButtonH;
-}
 void pressResetButton()
 {
   mouseMode = MODE_TRI;
@@ -86,7 +51,7 @@ void pressResetButton()
   animMode = ANIM_NONE;
   triAnim = 1.0;
   drawScale = 1.0;
-  resetButtonHover = false;
+  resetButton.hover = false;
 }
 void pressFlipButton()
 {
@@ -94,20 +59,34 @@ void pressFlipButton()
   mouseMode = MODE_FLIP;
   fgraph = new FGraph(tri);
   fgraph.embedify();
-  flipButtonHover = false;
+  flipButton.hover = false;
 }
 
 void mousePressed()
 {
   // If the mouse if over the button, handle the button press.
-  if (flipButtonHover)
+  if (flipButton.pressed())
   {
     pressFlipButton();
     return;
   }
-  if (resetButtonHover)
+  else if (resetButton.pressed())
   {
     pressResetButton();
+    return;
+  }
+  else if (delButton.pressed())
+  {
+    fgraph.currentMode = FGraph.DEL_EDGES_MODE;
+    return;
+  }
+  else if (angleButton.pressed())
+  {
+    fgraph.currentMode = FGraph.MIN_ANGLE_MODE;
+    return;
+  }
+  else if (ftodButton.pressed())
+  {
     return;
   }
   
@@ -136,6 +115,14 @@ void mousePressed()
     }
   }
   return;
+}
+
+void keyPressed()
+{
+  if (key == ' ')
+  {
+    node = null;
+  }
 }
 
 void mouseDragged()
@@ -184,7 +171,8 @@ void draw()
   if (mouseMode == MODE_FLIP)
   {
     // Draw it.
-    node = fgraph.closestNode(mouseX, mouseY, 10);
+    if (!mousePressed)
+    { FNode temp = fgraph.closestNode(mouseX, mouseY, 10); if (temp != null) node = temp; }
     fgraph.draw(node);
     
     // Draw a "fade" in.
@@ -209,22 +197,6 @@ void draw()
   float s = 1.0 - triAnim;
   tri.drawGraph(0, 0, s * triSmallWidth + triAnim * width, s * triSmallHeight + triAnim * height);
   
-//  // Draw the neighbors for the flip graph.
-//  if (node != null)
-//  {
-//    int count = node.neighborNodes.size();
-//    for (int i = 0; i < count; i++)
-//    {
-//      FNode nn = (FNode)node.neighborNodes.get(i);
-//      stroke(100, 20, 20);
-//      line(node.x, node.y, nn.x, nn.y);
-//    }
-//    
-//    fill(255, 0, 0);
-//    stroke(255, 0, 0);
-//    ellipse(node.x, node.y, 10, 10);
-//  }
-//  
   // Add an FPS counter.
   fill(255);
   text("FPS: " + round(frameRate), width - 50, 12);
@@ -232,13 +204,14 @@ void draw()
   // Draw the flip button.
   if (mouseMode == MODE_TRI)
   {
-    updateFlipButton();
-    drawFlipButton();
+    flipButton.update(); flipButton.draw();
   }
   else if (mouseMode == MODE_FLIP)
   {
-    updateResetButton();
-    drawResetButton();
+    resetButton.update(); resetButton.draw();
+    delButton.update(); delButton.draw();
+    angleButton.update(); angleButton.draw();
+    ftodButton.update(); ftodButton.draw();
   }
 }
 

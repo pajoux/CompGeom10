@@ -39,6 +39,10 @@ class FNode
 
 class FGraph
 {
+  // animation stuff.
+  float tz, tzoom;
+  float cz = 0.0, czoom = 500.0;
+  
   // value modes
   static final int DEL_EDGES_MODE = 0;
   static final int MIN_ANGLE_MODE = 1;
@@ -314,9 +318,20 @@ class FGraph
   {
     pg.beginDraw();
     pg.background(colorBackground);
-    pg.camera(0.0, 500.0, -300.0/* + rotation2*/,
-              0.0, 0.0, 0.0,
-              0.0, 0.0, 1.0);
+    if (focus == null)
+    {
+      tz = 0.0; tzoom = 500.0;
+    }
+    else
+    {
+      tz = focus.z - 200.0; tzoom = focus.y + 500.0;
+    }
+    cz = cz + (tz - cz) * 0.05;
+    czoom = czoom + (tzoom - czoom) * 0.05;
+    pg.camera(0.0, czoom, cz - 300.0/* + rotation2*/,
+//                -(mouseX - width / 2.0) * 0.5, (mouseY - height / 2.0)*1.2, cz,
+                0.0, 0.0, cz,
+                0.0, 0.0, 1.0);
     pg.translate(0.0, 0.0, -200.0);
     pg.rotateZ(rotation);
     
