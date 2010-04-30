@@ -143,7 +143,7 @@ pre {
 	                          </div>
 	                          <table width="100%" border="0" cellspacing="0" cellpadding="0">
 	                            <tr>
-	                              <td width="74%"><p><span class="light_text">Source code:</span> <a href="flip_graph.pde">flip_graph</a> <a href="fgraph.pde">fgraph</a> <a href="geom.pde">geom</a> <a href="triangulation.pde">triangulation</a> <span class="light_text">or </span><a href="http://github.com/pajoux/CompGeom10">Fork on GitHub</a></p>
+	                              <td width="74%"><p><span class="light_text">Source code:</span> <a href="button.pde">button</a> <a href="flip_graph.pde">flip_graph</a> <a href="fgraph.pde">fgraph</a> <a href="geom.pde">geom</a> <a href="triangulation.pde">triangulation</a> <span class="light_text">or </span><a href="http://github.com/pajoux/CompGeom10">Fork on GitHub</a></p>
                                   <p> <span class="light_text">Built with</span> <a href="http://processing.org" title="Processing.org">Processing</a></p></td>
 	                              <td width="26%"><a href="http://github.com/pajoux/CompGeom10"></a>
                                   <div class="download"> <a href="http://github.com/pajoux/CompGeom10/zipball/master"> <img border="0" width="48" src="http://github.com/images/modules/download/zip.png" /></a> <a href="http://github.com/pajoux/CompGeom10/tarball/master"> <img border="0" width="48" src="http://github.com/images/modules/download/tar.png" /></a></div></td>
@@ -161,24 +161,26 @@ pre {
         <td align="left" valign="top"><p><strong>Instructions:</strong> </p>
           <ol>
             <li>Place points by clicking on in the applet. You may move points once they have been places.</li>
-            <li>A triangulation of the points is created interactively as you add points.</li>
-            <li>Once you have entered enough points (MAX of 8) click on the &quot;Flip&quot; button.</li>
-            <li>This will generate the Flip Graph of the given embedding of points.</li>
+            <li>The Delaunay triangulation of the points is created interactively as you add and drag points.</li>
+            <li>Once you have entered enough points (MAX of 8) click on the &quot;Generate Flip Graph&quot; button.</li>
+            <li>This will display a lifting of the Flip Graph for the given embedding of points.</li>
             <li>You can click+drag to rotate the flip graph.</li>
-            <li>Green nodes represent closer to the Delaunay Triangulation while red nodes are &quot;poor&quot; triangulations.<br />
+            <li>Focusing on a node will zoom in on that node. Pressing spacebar will defocus and zoom out.</li>
+            <li>Clicking on a node will display the triangulation in the top left corner.</li>
+            <li>The colors and heights of each node represent a given triangulation heuristic.  To switch between heuristics, use the buttons in the lower left corner (or the keys 1, 2, 3).<br />
             </li>
             </ol>
           <p><strong>Purpose:</strong></p>
-          <p>The purpose of this applet is to explore the flip graphs of small triangulations. Specifically, we felt it would be interesting to visualize the &quot;utility&quot; of each node in the flip graph. Here we define &quot;utility&quot; as the number of Locally Delaunay Edges at triangulation has. Thus, the Delaunay Triangulation will be the node with the highest utility. The flip graph lets you visualize how the utility changes as you flip away from the Delaunay Triangulation.</p>
+          <p>The purpose of this applet is to explore the flip graphs of small triangulations. Specifically, we felt it would be interesting to visualize the &quot;utility&quot; of each node in the flip graph. The flip graph is displayed as a lifting with the height of each node defined by one of three heuristics: number of Delaunay edges, minimum angle, and flips to Delaunay.  Being able to visualize the graph under different heuristics allows the user to further understand the structure of the flip graph.</p>
           <p><strong>Algorithms:</strong></p>
           <ul>
-            <li><em>Delaunay Triangulation </em>- We implement an O(n^2) Delaunay Triangulation algorithm (we did not implement the History DAG) which is run interactively while the user places points. We modify it slightly so that we don't actually &quot;flip-to-delaunay&quot; so the triangulations we generate are not the actual Delaunay Triangulations. This is done on purpose since the flip graph will generate the actual Delaunay Triangulation.<br />
+            <li><em>Delaunay Triangulation </em>- We implement an O(n^2) Delaunay Triangulation algorithm (we did not implement the History DAG) which is run interactively while the user places points. Whenever a point is added or moved, the Delaunay triangulation should be updated.<br />
               <br />
             </li>
             <li><em>Flip Graph Generation</em> - A simple Breadth-First-Search is used to walk through all the possible edge flips in the triangulation. From this search we can generate the actual flip-graph.<br />
               <br />
             </li>
-            <li><em>Graph Drawing</em> - A modified version of Tutte's algorithm is used to draw the flip graph. Since the flip graph may not be planar the graph we generate is not always a planar embedding. However, we tried to tweak the drawing algorithm to space out the nodes in a way that provided reasonable readability.          </li>
+            <li><em>Graph Drawing</em> - A modified version of Tutte's algorithm (using simulated annealing) is used to draw the flip graph. Since the graph will be represented in a 3D lifting, edge crossings in 2D do not affect the 3D aesthetics as much.  Sometimes the edge crossings are unavoidable - as large flip graphs are not planar in 2D, and other times, we purposely introduce them (when pinning the outer face) to create better vertex layout.</li>
             </ul>
           <p><strong>Getting the Code:</strong></p>
 <p>You can clone the project with <a href="http://git-scm.com">Git</a> by running: </p>
